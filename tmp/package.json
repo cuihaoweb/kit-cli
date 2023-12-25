@@ -1,0 +1,22 @@
+{
+    "name": "my-app",
+    "private": true,
+    "version": "0.0.0",
+    "main": "./index.js",
+    "type": "module",
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "dev": "webpack",
+        "build": "webpack build --watch"
+    },
+    "dependencies": {
+        "eslint": "^8.56.0",
+        "lodash": "^1"
+    },
+    "devDependencies": {
+        "eslint": "^8.56.0",
+        "lodash": "^1"
+    }
+}

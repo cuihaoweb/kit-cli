@@ -1,0 +1,13 @@
+{
+    "favorites.resources": [
+        {
+            "filePath": "packages/m-thor-components/modules/gt-local-h5-local-life-channel",
+            "group": "Default"
+        },
+        {
+            "filePath": "packages/m-thor-components/components/gt-local-h5-first-popup",
+            "group": "Default"
+        }
+    ],
+    "workbench.tree.enableStickyScroll": true
+}
