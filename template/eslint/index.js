@@ -12,11 +12,11 @@ const resolveApp = (...paths) => resolve(__dirname, ...paths);
 
 export default context => {
     return {
-        createFileMap: async () => {
+        createFileMap: () => {
             return {
                 '/.eslintrc.js': () => {
                     const str = fs.readFileSync(resolveApp('./.eslintrc.ejs'), 'utf-8');
-                    const template = ejs.render(str);
+                    const template = ejs.render(str, context);
                     return template;
                 },
                 '/.eslintignore': () => {

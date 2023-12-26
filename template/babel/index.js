@@ -7,14 +7,32 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const resolveApp = (...paths) => resolve(__dirname, ...paths);
 
-const FILE_MAP = {
-    '/.babelrc.js': () => {
-        const str = fs.readFileSync(resolveApp('./.babelrc.js.ejs'), 'utf-8');
-        const template = ejs.render(str, {name: '李白'});
-        return template;
-    }
-};
 
-export const createFileMap = (context) => {
-    return FILE_MAP;
-};
+export default context => {
+    return {
+        createFileMap: () => {
+            return {
+                '/.babelrc.js': () => {
+                    const str = fs.readFileSync(resolveApp('./.babelrc.js.ejs'), 'utf-8');
+                    const template = ejs.render(str, context);
+                    return template;
+                }
+            };
+        },
+        getDeps: () => ['@babel/core'],
+        getDevDeps: () => {
+            return [
+                'babel',
+                '@babel/preset-env',
+                'babel-plugin-import',
+                'babel-loader',
+                ...(context.language === 'typescript' && [
+                    '@babel/preset-typescript'
+                ] || []),
+                ...(context.frame === 'react' && [
+                    '@babel/preset-react'
+                ] || []),
+            ].filter(Boolean);
+        }
+    };
+}

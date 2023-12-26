@@ -1,37 +1,43 @@
 {
-  "compilerOptions": {
-    "baseUrl": ".",
-    "outDir": ".",
-    "target": "esnext",
-    "module": "esnext",
-    "moduleResolution": "node",
-    "jsx": "react-jsx",
-    "noEmit": true,
-    "noEmitOnError": true,
-    "noImplicitThis": true,
-    "noFallthroughCasesInSwitch": true,
-    "importHelpers": true,
-    "strict": true,
-    "isolatedModules": true,
-    "resolveJsonModule": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "allowJs": true,
-    "allowUnreachableCode": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "plugins": [
-      {"name": "typescript-plugin-css-modules"}
-    ],
-    "lib": [
-        "dom",
-        "dom.iterable",
-        "esnext"
-    ],
-    "paths": {
-      "@/*": ["src/*"]
-    }
-  },
-  "include": ["src", "__tests__"],
-  "exclude": ["node_modules", "dist", "lib"]
+    "compilerOptions": {
+        "baseUrl": ".",
+        "outDir": ".",
+        "target": "esnext",
+        "module": "esnext",
+        "moduleResolution": "node",
+    <%_ if (frame === 'react') { _%>
+        "jsx": "react",
+        "jsxFactory": "h",
+        "jsxFragmentFactory": "Fragment",
+    <%_ } _%>
+        "noEmit": true,
+        "noEmitOnError": true,
+        "noImplicitThis": true,
+        "noFallthroughCasesInSwitch": true,
+        "importHelpers": true,
+        "strict": true,
+        "isolatedModules": true,
+        "resolveJsonModule": true,
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "allowJs": true,
+        "allowUnreachableCode": true,
+        "skipLibCheck": true,
+    <%_ if (useCssModule) { _%>
+        "forceConsistentCasingInFileNames": true,
+        "plugins": [
+            {"name": "typescript-plugin-css-modules"}
+        ],
+    <%_ } _%>
+        "lib": [
+            "dom",
+            "dom.iterable",
+            "esnext"
+        ],
+        "paths": {
+            "@/*": ["src/*"]
+        }
+    },
+    "include": ["src", "__tests__"],
+    "exclude": ["node_modules", "dist", "lib"]
 }

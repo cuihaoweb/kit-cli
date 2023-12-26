@@ -10,16 +10,11 @@ module.exports = {
             useBuiltIns: 'usage',
             corejs: 3
         }],
-        ['@babel/preset-react', {
-            runtime: 'automatic',
-            development: IS_DEVELOPMENT
-        }],
         ['@babel/preset-typescript', {
         }]
     ].filter(Boolean),
     plugins: [
-        IS_DEVELOPMENT && "react-refresh/babel",
-        'macros',
+        // 'macros',
         // ['import', {
         //     libraryName: 'antd',
         //     style: true,

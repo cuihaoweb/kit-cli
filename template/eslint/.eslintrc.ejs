@@ -8,6 +8,7 @@ module.exports = {
     },
     extends: ['eslint:recommended'],
     overrides: [
+    <%_ if (language === 'typescript') { _%>
         {
             files: ['*.ts', '*.tsx'],
             extends: ['plugin:@typescript-eslint/recommended'],
@@ -21,6 +22,8 @@ module.exports = {
                 '@typescript-eslint/ban-types': [1]
             }
         },
+    <%_ } _%>
+    <%_ if (frame === 'react') { _%>
         {
             files: ['*.jsx', '*.tsx'],
             extends: ['plugin:react/recommended', 'plugin:react/jsx-runtime', 'plugin:react-hooks/recommended'],
@@ -32,6 +35,7 @@ module.exports = {
                 'react/jsx-props-no-multi-spaces': ['error']
             }
         },
+    <%_ } else if (frame === 'vue') { _%>
         {
             files: ['*.vue'],
             extends: ['plugin:vue/vue3-recommended'],
@@ -39,6 +43,7 @@ module.exports = {
             parserOptions: {parser: '@typescript-eslint/parser'},
             rules: {'vue/html-indent': [2, 4]}
         }
+    <%_ } _%>
     ],
     parserOptions: {
         ecmaVersion: 'latest',

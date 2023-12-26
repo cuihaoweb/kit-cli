@@ -10,16 +10,22 @@ module.exports = {
             useBuiltIns: 'usage',
             corejs: 3
         }],
+    <%_ if (frame === 'react') { _%>
         ['@babel/preset-react', {
             runtime: 'automatic',
             development: IS_DEVELOPMENT
         }],
+    <%_ } _%>
+    <%_ if (language === 'typescript') { _%>
         ['@babel/preset-typescript', {
         }]
+    <%_ } _%>
     ].filter(Boolean),
     plugins: [
+    <%_ if (frame === 'react') { _%>
         IS_DEVELOPMENT && "react-refresh/babel",
-        'macros',
+    <%_ } _%>
+        // 'macros',
         // ['import', {
         //     libraryName: 'antd',
         //     style: true,
