@@ -20,7 +20,7 @@ const IS_CLIENT = process.env.BUILD_MODE === 'client';
 const IS_SERVER = process.env.BUILD_MODE === 'server';
 
 /* ========================= 编译 ========================= */
-const DEVTOOL = IS_DEVELOPMENT ? 'source-map' : 'hidden-source-map';
+const DEVTOOL = IS_DEVELOPMENT ? 'source-map' : 'nosources-source-map';
 
 const serverResolve = pathname => path.resolve(SERVER_PATH, pathname);
 const clientResolve = pathname => path.resolve(CLIENT_PATH, pathname);

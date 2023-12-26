@@ -14,6 +14,7 @@ import packagejson from './template/packagejson/index.js';
 import eslint from './template/eslint/index.js';
 import javascript from './template/javascript/index.js';
 import babel from './template/babel/index.js';
+import webpack from './template/webpack/index.js';
 import { createFileMap as createBabelFileMap } from './template/babel/index.js';
 
 // const __filename = fileURLToPath(import.meta.url);
@@ -84,6 +85,20 @@ program
 
             const spinner = ora('initializing').start();
 
+            // 基础依赖
+            await Promise.all(
+                ['rimraf', 'cross-env'].map(dep => limit(async () => {
+                    const { version } = await npmFetch.json(`/${dep}/latest`);
+                    Object.assign(context, deepMerge(context, { devDependencies: { [dep]: `^${version}` } }));
+                }))
+            );
+            await Promise.all(
+                ['react', 'react-dom'].map(dep => limit(async () => {
+                    const { version } = await npmFetch.json(`/${dep}/latest`);
+                    Object.assign(context, deepMerge(context, { dependencies: { [dep]: `^${version}` } }));
+                }))
+            );
+
             // .vscode 相关配置
             fs.cpSync(resolveApp('./template/base'), TMP_DIR, { recursive: true });
 
@@ -93,6 +108,32 @@ program
             //     const content = viteFileMap[key]();
             //     fs.writeFileSync(TMP_DIR + key, content);
             // });
+
+            // webpack相关配置
+            if (complier === 'webpack') {
+                spinner.stop();
+                const javascriptSpinner = ora('initializing webpack').start();
+                const { createFileMap, getDevDeps, getDeps } = webpack(context);
+                const fileMap = createFileMap();
+                Object.keys(fileMap).forEach(key => {
+                    const content = fileMap[key]();
+                    fs.writeFileSync(TMP_DIR + key, content);
+                });
+                await Promise.all(
+                    (await getDevDeps()).map(dep => limit(async () => {
+                        const { version } = await npmFetch.json(`/${dep}/latest`);
+                        Object.assign(context, deepMerge(context, { devDependencies: { [dep]: `^${version}` } }));
+                    }))
+                );
+                await Promise.all(
+                    (await getDeps()).map(dep => limit(async () => {
+                        const { version } = await npmFetch.json(`/${dep}/latest`);
+                        Object.assign(context, deepMerge(context, { dependencies: { [dep]: `^${version}` } }));
+                    }))
+                );
+                javascriptSpinner.succeed('create webpack succeed');
+                spinner.start();
+            }
 
             // jsconfig.json
             spinner.stop();

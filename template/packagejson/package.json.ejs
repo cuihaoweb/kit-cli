@@ -7,13 +7,17 @@
     "files": [
         "dist"
     ],
-    "scripts": {<% if (false) { %>
+    "scripts": {
+    <%_ if (complier === 'webpack') { _%>
+        "dev": "cross-env NODE_ENV=development webpack-dev-server --config build/webpack.config.js",
+        "build": "rimraf dist && cross-env NODE_ENV=production webpack --config build/webpack.config.js --progress",
+        "analyze": "rimraf dist && cross-env NODE_ENV=production webpack --config build/webpack.analyze.js --progress",
+        "test": "jest"
+    <%_ } else if (true) { _%>
         "dev": "vite",
         "build": "vite build --watch"
-    <% } else if (true) { %>
-        "dev": "webpack",
-        "build": "webpack build --watch"
-    <% } %>},
+    <%_ } _%>
+    },
     "dependencies": {<% Object.entries(dependencies).forEach(([key, value], i, array) => { %>
         "<%= key %>": "<%= value %>"<%- i !== array.length - 1 ? ',' : '' _%>
     <%_ }) %>

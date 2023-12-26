@@ -21,6 +21,17 @@ module.exports = {
                 '@typescript-eslint/ban-types': [1]
             }
         },
+        {
+            files: ['*.jsx', '*.tsx'],
+            extends: ['plugin:react/recommended', 'plugin:react/jsx-runtime', 'plugin:react-hooks/recommended'],
+            rules: {
+                'react/no-unknown-property': ['error', {ignore: ['styleName']}],
+                'react/prop-types': [0],
+                'react/display-name': [0],
+                'react/self-closing-comp': ['error', {component: true, html: true}], // 自闭合
+                'react/jsx-props-no-multi-spaces': ['error']
+            }
+        },
     ],
     parserOptions: {
         ecmaVersion: 'latest',
