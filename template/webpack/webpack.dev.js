@@ -1,6 +1,6 @@
 const {merge} = require('webpack-merge');
 const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
-const webpackConfigCommon = require('./webpack.common');
+const webpackConfigCommon = require('./webpack.config');
 const {PORT} = require('./config');
 
 /** @type{import('webpack').Configuration}*/

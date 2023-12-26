@@ -2,7 +2,19 @@ const path = require('path');
 const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
-const {MODE, ENTRY, OUTPUT, PUBLIC_PATH, DEVTOOL, SRC_PATH, IS_PRODUCT} = require('./config.js');
+const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
+const CopyPlugin = require('copy-webpack-plugin');
+const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
+const {MODE, ENTRY, OUTPUT, PUBLIC_PATH, DEVTOOL, SRC_PATH, IS_PRODUCT, IS_DEVELOPMENT} = require('./config.js');
+
+
+const conditionBack = (condition, value) => {
+    const res = {};
+    if (value instanceof Array) {
+        res = [];
+    }
+    return condition && value || res;
+};
 
 const baseStyleLoaderConf = [
     IS_PRODUCT
@@ -24,6 +36,7 @@ const baseStyleLoaderConf = [
     },
     'postcss-loader'
 ];
+
 
 /** @type{import('webpack').Configuration}*/
 module.exports = {
@@ -121,6 +134,69 @@ module.exports = {
             }
         ]
     },
+    ...conditionBack(IS_DEVELOPMENT, {
+        devServer: {
+            port: PORT,
+            open: true,
+            hot: true,
+            compress: true,
+            client: {
+                overlay: false
+            },
+            proxy: {
+                '/api/': {
+                    target: 'http://localhost:3000',
+                    secure: false,
+                    changeOrigin: true,
+                    pathRewrite: {'^/api/': '/'}
+                }
+            }
+        }
+    }),
+    ...conditionBack(IS_PRODUCT, {
+        performance: {
+            hints: 'warning'
+        }
+    }),
+    optimization: {
+        runtimeChunk: true,
+        ...conditionBack(IS_DEVELOPMENT, {
+            removeEmptyChunks: false,
+            splitChunks: false,
+        }),
+        ...conditionBack(IS_PRODUCT, {
+            minimizer: [
+                // new TerserPlugin(),
+                new CssMinimizerPlugin({parallel: false})
+            ],
+            splitChunks: {
+                chunks: 'all',
+                minSize: 30 * 1024,
+                maxSize: 1024 * 1024,
+                minChunks: 1,
+                maxAsyncRequests: 26,
+                maxInitialRequests: 26,
+                cacheGroups: {
+                    initialVender: {
+                        priority: -6,
+                        chunks: 'initial',
+                        reuseExistingChunk: true,
+                        test: /[\\/]node_modules[\\/]/,
+                        name: 'initialVender',
+                        filename: 'js/[name].[fullhash:8].js'
+                    },
+                    vender: {
+                        priority: -7,
+                        chunks: 'all',
+                        reuseExistingChunk: true,
+                        test: /[\\/]node_modules[\\/]/,
+                        name: 'vender',
+                        filename: 'js/[name].[fullhash:8].js'
+                    }
+                }
+            }
+        })
+    },
     plugins: [
         new HtmlWebpackPlugin({
             template: path.resolve(__dirname, '../index.ejs'),
@@ -140,5 +216,24 @@ module.exports = {
                 }
             })
         })
-    ]
+    ].concat(
+        conditionBack(IS_DEVELOPMENT, [
+            new ReactRefreshWebpackPlugin({overlay: false})
+        ])
+    ).concat(
+        conditionBack(IS_PRODUCT, [
+            new MiniCssExtractPlugin({
+                filename: 'assets/[name].[hash:8].css'
+            }),
+            // new CompressionPlugin(),
+            new CopyPlugin({
+                patterns: [
+                    {
+                        from: path.resolve(__dirname, '../public'),
+                        to: path.resolve(__dirname, '../dist')
+                    }
+                ]
+            })
+        ])
+    )
 };
