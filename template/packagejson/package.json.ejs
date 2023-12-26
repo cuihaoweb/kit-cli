@@ -14,7 +14,7 @@
         "dev": "webpack",
         "build": "webpack build --watch"
     <% } %>},
-    "dependencies": {<% Object.entries(devDependencies).forEach(([key, value], i, array) => { %>
+    "dependencies": {<% Object.entries(dependencies).forEach(([key, value], i, array) => { %>
         "<%= key %>": "<%= value %>"<%- i !== array.length - 1 ? ',' : '' _%>
     <%_ }) %>
     },

@@ -29,6 +29,7 @@
     "memfs": "^4.6.0",
     "npm-registry-fetch": "^16.1.0",
     "ora": "^8.0.1",
+    "p-limit": "^5.0.0",
     "shelljs": "^0.8.5"
   }
 }

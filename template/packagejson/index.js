@@ -29,8 +29,8 @@ export default context => {
                     const str = fs.readFileSync(resolveApp('./package.json.ejs'), 'utf-8');
                     const template = ejs.render(str, {
                         name: context.name,
-                        dependencies: {},
-                        devDependencies: context.devDependencies
+                        dependencies: context.dependencies || {},
+                        devDependencies: context.devDependencies || {}
                     });
                     return template;
                 }
