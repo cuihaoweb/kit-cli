@@ -15,11 +15,9 @@ import eslint from './template/eslint/index.js';
 import javascript from './template/javascript/index.js';
 import babel from './template/babel/index.js';
 import webpack from './template/webpack/index.js';
-import { createFileMap as createBabelFileMap } from './template/babel/index.js';
+import { fileURLToPath } from 'url';
+export { resolveApp } from './src/utils.js';
 
-// const __filename = fileURLToPath(import.meta.url);
-// const __dirname = dirname(__filename);
-const resolveApp = (...paths) => path.resolve(dirname(''), ...paths);
 const limit = pLimit(cpus().length - 1);
 
 program

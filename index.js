@@ -3,19 +3,161 @@ import { program } from "commander";
 import { input, select, confirm } from "@inquirer/prompts";
 import ora from "ora";
 import fs from "fs";
-import path, { dirname } from "path";
+import path, { dirname, resolve } from "path";
 import chalk from "chalk";
 import deepMerge from "deepmerge";
 import npmFetch from "npm-registry-fetch";
 import pLimit from "p-limit";
 import { cpus } from "os";
-import "./template/vite/index.js";
-import packagejson from "./template/packagejson/index.js";
-import eslint from "./template/eslint/index.js";
-import javascript from "./template/javascript/index.js";
-import babel from "./template/babel/index.js";
-import webpack from "./template/webpack/index.js";
-const resolveApp = (...paths) => path.resolve(dirname(""), ...paths);
+import { fileURLToPath } from "url";
+import ejs from "ejs";
+const __filename$3 = fileURLToPath(import.meta.url);
+dirname(__filename$3);
+const __filename$2 = fileURLToPath(import.meta.url);
+const __dirname$2 = dirname(__filename$2);
+const resolveApp$4 = (...paths) => resolve(__dirname$2, ...paths);
+const packagejson = (context) => {
+  return {
+    createFileMap: () => {
+      return {
+        "/package.json": () => {
+          const str = fs.readFileSync(resolveApp$4("./package.json.ejs"), "utf-8");
+          const template2 = ejs.render(str, context);
+          return template2;
+        }
+      };
+    }
+  };
+};
+const eslintignoreTemplate = "node_modules\n\ndist\ndll\nlib\n\ncoverage\n\npublic\n";
+const eslintrcTemplate = "module.exports = {\n    root: true,\n    env: {\n        browser: true,\n        es2021: true,\n        node: true,\n        jest: true\n    },\n    extends: ['eslint:recommended'],\n    overrides: [\n    <%_ if (language === 'typescript') { _%>\n        {\n            files: ['*.ts', '*.tsx'],\n            extends: ['plugin:@typescript-eslint/recommended'],\n            parser: '@typescript-eslint/parser',\n            plugins: ['@typescript-eslint'],\n            rules: {\n                '@typescript-eslint/no-var-requires': [0],\n                '@typescript-eslint/no-namespace': [0],\n                '@typescript-eslint/no-empty-function': [1],\n                '@typescript-eslint/no-explicit-any': [1],\n                '@typescript-eslint/ban-types': [1]\n            }\n        },\n    <%_ } _%>\n    <%_ if (frame === 'react') { _%>\n        {\n            files: ['*.jsx', '*.tsx'],\n            extends: ['plugin:react/recommended', 'plugin:react/jsx-runtime', 'plugin:react-hooks/recommended'],\n            rules: {\n                'react/no-unknown-property': ['error', {ignore: ['styleName']}],\n                'react/prop-types': [0],\n                'react/display-name': [0],\n                'react/self-closing-comp': ['error', {component: true, html: true}], // 自闭合\n                'react/jsx-props-no-multi-spaces': ['error']\n            }\n        },\n    <%_ } else if (frame === 'vue') { _%>\n        {\n            files: ['*.vue'],\n            extends: ['plugin:vue/vue3-recommended'],\n            parser: 'vue-eslint-parser',\n            parserOptions: {parser: '@typescript-eslint/parser'},\n            rules: {'vue/html-indent': [2, 4]}\n        }\n    <%_ } _%>\n    ],\n    parserOptions: {\n        ecmaVersion: 'latest',\n        sourceType: 'module'\n    },\n    plugins: ['simple-import-sort'],\n    rules: {\n        'max-len': ['error', {code: 120}], // 允许一行最大的长度\n\n        // 缩进\n        indent: [2, 4],\n\n        // 引号\n        quotes: [2, 'single'],\n\n        'arrow-parens': ['error', 'as-needed'], // 剪头函数一个参数时不需要圆括号\n\n        // 对象属性引号\n        'quote-props': [2, 'as-needed'],\n\n        // 对象最后一项不加,\n        'comma-dangle': [2, 'never'],\n\n        // 末尾加;\n        semi: ['error', 'always'],\n\n        // 行不允许空格\n        'no-trailing-spaces': [2],\n\n        // 大括号空格\n        'object-curly-spacing': [2, 'never'],\n\n        'object-curly-newline': [2,  {consistent: true}], // 对象头尾是否换行\n\n        'object-property-newline': [2, {allowAllPropertiesOnSameLine: true}], // 对象属性是否折行，动态适应\n\n        'key-spacing': ['error', {afterColon: true}], // 冒号后留空格\n\n        'comma-spacing': ['error', {after: true}], // 逗号后留空格\n\n        // 文件结尾空行\n        'eol-last': [2, 'always'],\n\n        // 空行的数量\n        'no-multiple-empty-lines': [2, {max: 2, maxEOF: 1}],\n\n        'no-case-declarations': [0],\n\n        'keyword-spacing': [2],\n\n        'no-shadow': [2], // 重复定义\n\n        'no-redeclare': [2],\n\n        'no-empty': [2, {allowEmptyCatch: true}],\n\n        'no-unused-vars': [2],\n\n        // 针对import排序\n        'simple-import-sort/imports': [1, {\n            groups: [['^node:', '^[a-zA-Z]', '^@[a-zA-Z]', '^@\\\\/', '^\\\\/', '^\\\\.', '^\\\\u0000']]\n        }],\n\n        'simple-import-sort/exports': [1]\n    }\n};\n";
+const eslint = (context) => {
+  return {
+    createFileMap: () => {
+      return {
+        "/.eslintrc.js": () => ejs.render(eslintrcTemplate, context),
+        "/.eslintignore": () => eslintignoreTemplate
+      };
+    },
+    getDeps: () => [],
+    getDevDeps: () => {
+      return [
+        "eslint",
+        "@babel/eslint-parser",
+        "eslint-plugin-simple-import-sort",
+        ...context.language === "typescript" && [
+          "@typescript-eslint/eslint-plugin",
+          "@typescript-eslint/parser"
+        ] || [],
+        ...context.frame === "react" && [
+          "eslint-plugin-react",
+          "eslint-plugin-react-hooks"
+        ] || [],
+        ...context.frame === "vue" && [
+          "eslint-plugin-vue"
+        ] || []
+      ].filter(Boolean);
+    }
+  };
+};
+const __filename$1 = fileURLToPath(import.meta.url);
+const __dirname$1 = dirname(__filename$1);
+const resolveApp$3 = (...paths) => resolve(__dirname$1, ...paths);
+const javascript = (context) => {
+  return {
+    createFileMap: () => {
+      return {
+        "/jsconfig.json": () => {
+          const str = fs.readFileSync(resolveApp$3("./jsconfig.json.ejs"), "utf-8");
+          const template2 = ejs.render(str, context);
+          return template2;
+        },
+        "/tsconfig.json": () => {
+          const str = fs.readFileSync(resolveApp$3("./tsconfig.json.ejs"), "utf-8");
+          const template2 = ejs.render(str, context);
+          return template2;
+        }
+      };
+    },
+    getDeps: () => [],
+    getDevDeps: () => {
+      return [
+        "typescript",
+        ...context.useCssModule && [
+          "typescript-plugin-css-modules"
+        ] || []
+      ].filter(Boolean);
+    }
+  };
+};
+const template = "const {resolve} = require('path');\nconst {IS_DEVELOPMENT, IS_PRODUCT} = require('./build/config');\n\nmodule.exports = {\n    presets: [\n        ['@babel/preset-env', {\n            targets: {\n                browsers: ['ie >= 8', 'iOS 7']\n            },\n            useBuiltIns: 'usage',\n            corejs: 3\n        }],\n    <%_ if (frame === 'react') { _%>\n        ['@babel/preset-react', {\n            runtime: 'automatic',\n            development: IS_DEVELOPMENT\n        }],\n    <%_ } _%>\n    <%_ if (language === 'typescript') { _%>\n        ['@babel/preset-typescript', {\n        }]\n    <%_ } _%>\n    ].filter(Boolean),\n    plugins: [\n    <%_ if (frame === 'react') { _%>\n        IS_DEVELOPMENT && \"react-refresh/babel\",\n    <%_ } _%>\n        // 'macros',\n        // ['import', {\n        //     libraryName: 'antd',\n        //     style: true,\n        //     libraryDirectory: 'lib'\n        // }, 'antd'],\n        ['import', {\n            libraryName: 'react-components',\n            style: name => `${name}/index.css`,\n            libraryDirectory: 'lib',\n        }, 'react-components'],\n    ].filter(Boolean)\n};";
+const babel = (context) => {
+  return {
+    createFileMap: () => {
+      return {
+        "/.babelrc.js": () => {
+          return ejs.render(template, context);
+        }
+      };
+    },
+    getDeps: () => ["@babel/core"],
+    getDevDeps: () => {
+      return [
+        "babel",
+        "@babel/preset-env",
+        "babel-plugin-import",
+        "babel-loader",
+        ...context.language === "typescript" && [
+          "@babel/preset-typescript"
+        ] || [],
+        ...context.frame === "react" && [
+          "@babel/preset-react"
+        ] || []
+      ].filter(Boolean);
+    }
+  };
+};
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const resolveApp$2 = (...paths) => resolve(__dirname, ...paths);
+const webpack = (context) => {
+  return {
+    createFileMap: () => {
+      return {
+        "/build/webpack.config.js": () => {
+          const str = fs.readFileSync(resolveApp$2("./webpack.config.js.ejs"), "utf-8");
+          const template2 = ejs.render(str, context);
+          return template2;
+        },
+        "/build/webpack.analyze.js": () => {
+          const str = fs.readFileSync(resolveApp$2("./webpack.analyze.js.ejs"), "utf-8");
+          const template2 = ejs.render(str, context);
+          return template2;
+        }
+      };
+    },
+    getDeps: () => [],
+    getDevDeps: () => {
+      return [
+        "webpack",
+        "webpack-cli",
+        "webpack-dev-server",
+        "copy-webpack-plugin",
+        "html-webpack-plugin",
+        "add-asset-html-webpack-plugin",
+        "webpack-bundle-analyzer",
+        "babel-loader",
+        "less-loader",
+        "css-loader",
+        "style-loader",
+        "postcss-loader"
+      ].filter(Boolean);
+    }
+  };
+};
+const curDirname = () => dirname(fileURLToPath(import.meta.url));
+const resolveApp$1 = (...paths) => path.resolve(curDirname(), ...paths);
+process.cwd();
 const limit = pLimit(cpus().length - 1);
 program.command("create").argument("[appName]", "appName").description("create app").action(async (appName) => {
   try {
@@ -198,3 +340,6 @@ program.command("create").argument("[appName]", "appName").description("create a
   }
 });
 program.parse();
+export {
+  resolveApp$1 as resolveApp
+};

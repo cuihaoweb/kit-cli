@@ -6,6 +6,9 @@ const CWD_PATH = process.cwd();
 const resolveApp = (...paths) => path.resolve(CWD_PATH, ...paths);
 
 export default defineConfig({
+    resolve: {
+        extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json', '.ejs'],
+    },
     build: {
         lib: {
             entry: resolveApp('./index.mjs'),
@@ -15,7 +18,7 @@ export default defineConfig({
         },
         outDir: './',
         rollupOptions: {
-            external: /template/
+            // external: /template/
         },
     },
     plugins: [
