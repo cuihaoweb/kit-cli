@@ -1,6 +1,6 @@
 {
   "name": "create-kit-cli",
-  "version": "0.0.3-alpha.0",
+  "version": "0.0.3-alpha.3",
   "main": "./index.js",
   "type": "module",
   "bin": {
@@ -14,10 +14,7 @@
   "scripts": {
     "dev": "vite build --watch",
     "build": "vite build",
-    "prepublish:alpha": "npm version prepatch --preid=alpha && sudo pnpm i && npm run build",
-    "prepublish": "npm version patch && sudo pnpm i && npm run build",
-    "publish:alpha": "npm publish --tag=alpha",
-    "publish": "npm publish"
+    "prepublish": "sudo pnpm i && npm run build"
   },
   "devDependencies": {
     "eslint": "^8.56.0",
