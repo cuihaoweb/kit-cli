@@ -14,7 +14,7 @@
   "scripts": {
     "dev": "vite build --watch",
     "build": "vite build",
-    "prepublish:alpha": "npm version prerelease && pnpm i && npm run build",
+    "prepublish:alpha": "npm version prerelease && pnpm install && npm run build",
     "prepublish": "npm version patch && pnpm i && npm run build",
     "publish:alpha": "npm publish --tag=alpha",
     "publish": "npm publish"
