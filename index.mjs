@@ -9,14 +9,13 @@ import deepMerge from 'deepmerge';
 import npmFetch from 'npm-registry-fetch';
 import pLimit from 'p-limit';
 import { cpus } from 'os';
-import { createFileMap as createViteFileMap } from './template/vite/index.js';
+// import { createFileMap as createViteFileMap } from './template/vite/index.js';
 import packagejson from './template/packagejson/index.js';
 import eslint from './template/eslint/index.js';
 import javascript from './template/javascript/index.js';
 import babel from './template/babel/index.js';
 import webpack from './template/webpack/index.js';
-import { fileURLToPath } from 'url';
-export { resolveApp } from './src/utils.js';
+import { resolveApp } from './utils.js';
 
 const limit = pLimit(cpus().length - 1);
 

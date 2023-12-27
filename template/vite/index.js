@@ -1,18 +1,10 @@
 import fs from 'fs';
-import {fileURLToPath} from 'url';
-import {dirname, resolve} from 'path';
 import ejs from 'ejs';
+import viteTemplate from './vite.config.ejs?raw';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const resolveApp = (...paths) => resolve(__dirname, ...paths);
 
 const FILE_MAP = {
-    '/vite.config.js': () => {
-        const str = fs.readFileSync(resolveApp('./config.ejs'), 'utf-8');
-        const template = ejs.render(str, {name: '李白'});
-        return template;
-    }
+    '/vite.config.js': () => ejs.render(viteTemplate, {name: '李白'})
 };
 
 export const createFileMap = (context) => {

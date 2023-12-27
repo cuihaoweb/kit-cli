@@ -1,25 +1,17 @@
-import fs from 'fs';
-import {fileURLToPath} from 'url';
-import {dirname, resolve} from 'path';
 import ejs from 'ejs';
+import jsTemplate from './jsconfig.json.ejs?raw';
+import tsTemplate from './tsconfig.json.ejs?raw';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const resolveApp = (...paths) => resolve(__dirname, ...paths);
 
 export default context => {
     return {
         createFileMap: () => {
             return {
                 '/jsconfig.json': () => {
-                    const str = fs.readFileSync(resolveApp('./jsconfig.json.ejs'), 'utf-8');
-                    const template = ejs.render(str, context);
-                    return template;
+                    return ejs.render(jsTemplate, context);
                 },
                 '/tsconfig.json': () => {
-                    const str = fs.readFileSync(resolveApp('./tsconfig.json.ejs'), 'utf-8');
-                    const template = ejs.render(str, context);
-                    return template;
+                    return ejs.render(tsTemplate, context);
                 }
             };
         },

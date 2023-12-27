@@ -3,28 +3,49 @@ import { program } from "commander";
 import { input, select, confirm } from "@inquirer/prompts";
 import ora from "ora";
 import fs from "fs";
-import path, { dirname, resolve } from "path";
+import path, { dirname } from "path";
 import chalk from "chalk";
 import deepMerge from "deepmerge";
 import npmFetch from "npm-registry-fetch";
 import pLimit from "p-limit";
 import { cpus } from "os";
-import { fileURLToPath } from "url";
 import ejs from "ejs";
-const __filename$3 = fileURLToPath(import.meta.url);
-dirname(__filename$3);
-const __filename$2 = fileURLToPath(import.meta.url);
-const __dirname$2 = dirname(__filename$2);
-const resolveApp$4 = (...paths) => resolve(__dirname$2, ...paths);
+import { fileURLToPath } from "url";
+const packageTemplate = `{
+    "name": "<%= name %>",
+    "private": true,
+    "version": "0.0.0",
+    "main": "./index.js",
+    "type": "module",
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+    <%_ if (complier === 'webpack') { _%>
+        "dev": "cross-env NODE_ENV=development webpack-dev-server --config build/webpack.config.js",
+        "build": "rimraf dist && cross-env NODE_ENV=production webpack --config build/webpack.config.js --progress",
+        "analyze": "rimraf dist && cross-env NODE_ENV=production webpack --config build/webpack.analyze.js --progress",
+        "test": "jest"
+    <%_ } else if (true) { _%>
+        "dev": "vite",
+        "build": "vite build --watch"
+    <%_ } _%>
+    },
+    "dependencies": {<% Object.entries(dependencies).forEach(([key, value], i, array) => { %>
+        "<%= key %>": "<%= value %>"<%- i !== array.length - 1 ? ',' : '' _%>
+    <%_ }) %>
+    },
+    "devDependencies": {<% Object.entries(devDependencies).forEach(([key, value], i, array) => { %>
+        "<%= key %>": "<%= value %>"<%- i !== array.length - 1 ? ',' : '' _%>
+    <%_ }) %>
+    }
+}
+`;
 const packagejson = (context) => {
   return {
     createFileMap: () => {
       return {
-        "/package.json": () => {
-          const str = fs.readFileSync(resolveApp$4("./package.json.ejs"), "utf-8");
-          const template2 = ejs.render(str, context);
-          return template2;
-        }
+        "/package.json": () => ejs.render(packageTemplate, context)
       };
     }
   };
@@ -60,22 +81,59 @@ const eslint = (context) => {
     }
   };
 };
-const __filename$1 = fileURLToPath(import.meta.url);
-const __dirname$1 = dirname(__filename$1);
-const resolveApp$3 = (...paths) => resolve(__dirname$1, ...paths);
+const jsTemplate = '{\n    "compilerOptions": {\n        "baseUrl": ".",\n        "paths": {\n            "@/*": ["src/*"]\n        }\n    },\n    "include": ["src"],\n    "exclude": ["node_modules"]\n}';
+const tsTemplate = `{
+    "compilerOptions": {
+        "baseUrl": ".",
+        "outDir": ".",
+        "target": "esnext",
+        "module": "esnext",
+        "moduleResolution": "node",
+    <%_ if (frame === 'react') { _%>
+        "jsx": "react",
+        "jsxFactory": "h",
+        "jsxFragmentFactory": "Fragment",
+    <%_ } _%>
+        "noEmit": true,
+        "noEmitOnError": true,
+        "noImplicitThis": true,
+        "noFallthroughCasesInSwitch": true,
+        "importHelpers": true,
+        "strict": true,
+        "isolatedModules": true,
+        "resolveJsonModule": true,
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "allowJs": true,
+        "allowUnreachableCode": true,
+        "skipLibCheck": true,
+    <%_ if (useCssModule) { _%>
+        "forceConsistentCasingInFileNames": true,
+        "plugins": [
+            {"name": "typescript-plugin-css-modules"}
+        ],
+    <%_ } _%>
+        "lib": [
+            "dom",
+            "dom.iterable",
+            "esnext"
+        ],
+        "paths": {
+            "@/*": ["src/*"]
+        }
+    },
+    "include": ["src", "__tests__"],
+    "exclude": ["node_modules", "dist", "lib"]
+}`;
 const javascript = (context) => {
   return {
     createFileMap: () => {
       return {
         "/jsconfig.json": () => {
-          const str = fs.readFileSync(resolveApp$3("./jsconfig.json.ejs"), "utf-8");
-          const template2 = ejs.render(str, context);
-          return template2;
+          return ejs.render(jsTemplate, context);
         },
         "/tsconfig.json": () => {
-          const str = fs.readFileSync(resolveApp$3("./tsconfig.json.ejs"), "utf-8");
-          const template2 = ejs.render(str, context);
-          return template2;
+          return ejs.render(tsTemplate, context);
         }
       };
     },
@@ -117,23 +175,14 @@ const babel = (context) => {
     }
   };
 };
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const resolveApp$2 = (...paths) => resolve(__dirname, ...paths);
+const webpackTemplate = "const path = require('path');\nconst webpack = require('webpack');\nconst HtmlWebpackPlugin = require('html-webpack-plugin');\nconst MiniCssExtractPlugin = require('mini-css-extract-plugin');\nconst CssMinimizerPlugin = require('css-minimizer-webpack-plugin');\nconst CopyPlugin = require('copy-webpack-plugin');\nconst ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');\nconst {MODE, ENTRY, OUTPUT, PUBLIC_PATH, DEVTOOL, SRC_PATH, IS_PRODUCT, IS_DEVELOPMENT} = require('./config.js');\n\n\nconst conditionBack = (condition, value) => {\n    const res = {};\n    if (value instanceof Array) {\n        res = [];\n    }\n    return condition && value || res;\n};\n\nconst baseStyleLoaderConf = [\n    IS_PRODUCT\n        ? ({\n            loader: MiniCssExtractPlugin.loader,\n            options: {publicPath: '../'}\n        })\n        : 'style-loader',\n    {\n        loader: require.resolve('css-loader'),\n        options: {\n            modules: {\n                mode: 'local',\n                auto: /\\.module\\.\\w+$/i,\n                localIdentName: '[path][name]__[local]',\n                localIdentContext: SRC_PATH\n            }\n        }\n    },\n    'postcss-loader'\n];\n\n\n/** @type{import('webpack').Configuration}*/\nmodule.exports = {\n    mode: MODE,\n    entry: [ENTRY].filter(Boolean),\n    output: {\n        path: OUTPUT,\n        filename: 'js/[name]-[fullhash:8].bundle.js',\n        publicPath: PUBLIC_PATH\n    },\n    cache: IS_PRODUCT ? false : {\n        type: 'filesystem',\n        allowCollectingMemory: true\n    },\n    resolve: {\n        extensions: ['.ts', '.tsx', '.js', '.jsx', '.json', 'css', 'less', 'scss'],\n        alias: {\n            '@': SRC_PATH\n        },\n        modules: [SRC_PATH, 'node_modules']\n    },\n    devtool: DEVTOOL,\n    module: {\n        rules: [\n            {\n                test: /\\.[jt]sx?$/,\n                include: SRC_PATH,\n                exclude: /node_modules/,\n                use: [\n                    {\n                        loader: 'babel-loader',\n                        options: {\n                            cacheDirectory: true\n                        }\n                    }\n                    // IS_DEVELOPMENT && {\n                    //     loader: 'swc-loader',\n                    //     options: {\n                    //         parseMap: true,\n                    //         jsc: {\n                    //             parser: {\n                    //                 syntax: 'typescript',\n                    //                 tsx: true,\n                    //                 jsx: true,\n                    //                 dynamicImport: true\n                    //             },\n                    //             transform: {\n                    //                 react: {\n                    //                     runtime: 'automatic',\n                    //                     development: IS_DEVELOPMENT,\n                    //                     refresh: IS_DEVELOPMENT\n                    //                 }\n                    //             }\n                    //         }\n                    //     }\n                    // }\n                ]\n            },\n            {\n                test: /\\.scss$/,\n                exclude: /node_modules/,\n                use: [\n                    ...baseStyleLoaderConf,\n                    {\n                        loader: 'sass-loader'\n                    }\n                ]\n            },\n            {\n                test: /\\.less$/,\n                use: [\n                    ...baseStyleLoaderConf,\n                    {\n                        loader: 'less-loader'\n                    }\n                ]\n            },\n            {\n                test: /\\.css$/,\n                use: [\n                    ...baseStyleLoaderConf\n                ]\n            },\n            {\n                test: /\\.(woff|woff2|ttf|eot|svg|png|jpg|gif)(#.+)?$/,\n                type: 'asset',\n                generator: {\n                    filename: 'assets/[name].[hash:8][ext][query]'\n                },\n                parser: {\n                    dataUrlCondition: {\n                        maxSize: 8 * 1024\n                    }\n                }\n            }\n        ]\n    },\n    ...conditionBack(IS_DEVELOPMENT, {\n        devServer: {\n            port: PORT,\n            open: true,\n            hot: true,\n            compress: true,\n            client: {\n                overlay: false\n            },\n            proxy: {\n                '/api/': {\n                    target: 'http://localhost:3000',\n                    secure: false,\n                    changeOrigin: true,\n                    pathRewrite: {'^/api/': '/'}\n                }\n            }\n        }\n    }),\n    ...conditionBack(IS_PRODUCT, {\n        performance: {\n            hints: 'warning'\n        }\n    }),\n    optimization: {\n        runtimeChunk: true,\n        ...conditionBack(IS_DEVELOPMENT, {\n            removeEmptyChunks: false,\n            splitChunks: false,\n        }),\n        ...conditionBack(IS_PRODUCT, {\n            minimizer: [\n                // new TerserPlugin(),\n                new CssMinimizerPlugin({parallel: false})\n            ],\n            splitChunks: {\n                chunks: 'all',\n                minSize: 30 * 1024,\n                maxSize: 1024 * 1024,\n                minChunks: 1,\n                maxAsyncRequests: 26,\n                maxInitialRequests: 26,\n                cacheGroups: {\n                    initialVender: {\n                        priority: -6,\n                        chunks: 'initial',\n                        reuseExistingChunk: true,\n                        test: /[\\\\/]node_modules[\\\\/]/,\n                        name: 'initialVender',\n                        filename: 'js/[name].[fullhash:8].js'\n                    },\n                    vender: {\n                        priority: -7,\n                        chunks: 'all',\n                        reuseExistingChunk: true,\n                        test: /[\\\\/]node_modules[\\\\/]/,\n                        name: 'vender',\n                        filename: 'js/[name].[fullhash:8].js'\n                    }\n                }\n            }\n        })\n    },\n    plugins: [\n        new HtmlWebpackPlugin({\n            template: path.resolve(__dirname, '../index.ejs'),\n            templateParameters: {\n                title: 'react App',\n                baseUrl: IS_PRODUCT ? './' : '/'\n            }\n        }),\n        new webpack.ProvidePlugin({\n            // React: 'react'\n        }),\n        new webpack.DefinePlugin({\n            process: JSON.stringify({\n                env: {\n                    NODE_ENV: process.env.NODE_ENV,\n                    ASSET_PATH: PUBLIC_PATH\n                }\n            })\n        })\n    ].concat(\n        conditionBack(IS_DEVELOPMENT, [\n            new ReactRefreshWebpackPlugin({overlay: false})\n        ])\n    ).concat(\n        conditionBack(IS_PRODUCT, [\n            new MiniCssExtractPlugin({\n                filename: 'assets/[name].[hash:8].css'\n            }),\n            // new CompressionPlugin(),\n            new CopyPlugin({\n                patterns: [\n                    {\n                        from: path.resolve(__dirname, '../public'),\n                        to: path.resolve(__dirname, '../dist')\n                    }\n                ]\n            })\n        ])\n    )\n};\n";
+const webpackAnalyzeTemplate = "const {merge} = require('webpack-merge');\nconst webpackConfigProd = require('./webpack.prod');\nconst BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;\n\n/** @type{import('webpack').Configuration}*/\nmodule.exports = merge(webpackConfigProd, {\n    plugins: [\n        new BundleAnalyzerPlugin()\n    ]\n});\n";
 const webpack = (context) => {
   return {
     createFileMap: () => {
       return {
-        "/build/webpack.config.js": () => {
-          const str = fs.readFileSync(resolveApp$2("./webpack.config.js.ejs"), "utf-8");
-          const template2 = ejs.render(str, context);
-          return template2;
-        },
-        "/build/webpack.analyze.js": () => {
-          const str = fs.readFileSync(resolveApp$2("./webpack.analyze.js.ejs"), "utf-8");
-          const template2 = ejs.render(str, context);
-          return template2;
-        }
+        "/build/webpack.config.js": () => ejs.render(webpackTemplate, context),
+        "/build/webpack.analyze.js": () => ejs.render(webpackAnalyzeTemplate, context)
       };
     },
     getDeps: () => [],
@@ -156,7 +205,7 @@ const webpack = (context) => {
   };
 };
 const curDirname = () => dirname(fileURLToPath(import.meta.url));
-const resolveApp$1 = (...paths) => path.resolve(curDirname(), ...paths);
+const resolveApp = (...paths) => path.resolve(curDirname(), ...paths);
 process.cwd();
 const limit = pLimit(cpus().length - 1);
 program.command("create").argument("[appName]", "appName").description("create app").action(async (appName) => {
@@ -340,6 +389,3 @@ program.command("create").argument("[appName]", "appName").description("create a
   }
 });
 program.parse();
-export {
-  resolveApp$1 as resolveApp
-};

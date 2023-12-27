@@ -1,26 +1,14 @@
-import fs from 'fs';
 import ejs from 'ejs';
-import {fileURLToPath} from 'url';
-import {dirname, resolve} from 'path';
+import webpackTemplate from './webpack.config.js.ejs?raw';
+import webpackAnalyzeTemplate from './webpack.analyze.js.ejs?raw';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const resolveApp = (...paths) => resolve(__dirname, ...paths);
 
 export default context => {
     return {
         createFileMap: () => {
             return {
-                '/build/webpack.config.js': () => {
-                    const str = fs.readFileSync(resolveApp('./webpack.config.js.ejs'), 'utf-8');
-                    const template = ejs.render(str, context);
-                    return template;
-                },
-                '/build/webpack.analyze.js': () => {
-                    const str = fs.readFileSync(resolveApp('./webpack.analyze.js.ejs'), 'utf-8');
-                    const template = ejs.render(str, context);
-                    return template;
-                }
+                '/build/webpack.config.js': () => ejs.render(webpackTemplate, context),
+                '/build/webpack.analyze.js': () => ejs.render(webpackAnalyzeTemplate, context)
             };
         },
         getDeps: () => [],
