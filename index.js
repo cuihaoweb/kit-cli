@@ -206,7 +206,8 @@ const webpack = (context) => {
 };
 const curDirname = () => dirname(fileURLToPath(import.meta.url));
 const resolveApp = (...paths) => path.resolve(curDirname(), ...paths);
-process.cwd();
+const CWD_DIR = process.cwd();
+const resolveCWD = (...paths) => path.resolve(CWD_DIR, ...paths);
 const limit = pLimit(cpus().length - 1);
 program.command("create").argument("[appName]", "appName").description("create app").action(async (appName) => {
   try {
@@ -265,7 +266,7 @@ program.command("create").argument("[appName]", "appName").description("create a
       cssPreprocessor,
       complier
     });
-    const TMP_DIR = resolveApp("./tmp");
+    const TMP_DIR = resolveCWD("./tmp");
     fs.mkdirSync(TMP_DIR, { recursive: true });
     const spinner = ora("initializing").start();
     await Promise.all(

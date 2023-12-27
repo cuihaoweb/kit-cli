@@ -15,7 +15,7 @@ import eslint from './template/eslint/index.js';
 import javascript from './template/javascript/index.js';
 import babel from './template/babel/index.js';
 import webpack from './template/webpack/index.js';
-import { resolveApp } from './utils.js';
+import { resolveApp, resolveCWD } from './utils.js';
 
 const limit = pLimit(cpus().length - 1);
 
@@ -77,7 +77,7 @@ program
                 cssPreprocessor, complier
             });
 
-            const TMP_DIR = resolveApp('./tmp');
+            const TMP_DIR = resolveCWD('./tmp');
             fs.mkdirSync(TMP_DIR, { recursive: true });
 
             const spinner = ora('initializing').start();
