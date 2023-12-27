@@ -1,6 +1,6 @@
 {
   "name": "create-kit-cli",
-  "version": "0.0.3-alpha.3",
+  "version": "0.0.3-alpha.4",
   "main": "./index.js",
   "type": "module",
   "bin": {
