@@ -16,14 +16,22 @@ const SERVER_PATH = path.resolve(__dirname, '../server');
 const CLIENT_PATH = path.resolve(__dirname, '../client');
 const OUTPUT = path.resolve(__dirname, '../dist');
 const PUBLIC_PATH = IS_PRODUCT ? './' : '/';
-const IS_CLIENT = process.env.BUILD_MODE === 'client';
-const IS_SERVER = process.env.BUILD_MODE === 'server';
+const IS_CLIENT = process.env.MODE_ENV === 'client';
+const IS_SERVER = process.env.MODE_ENV === 'server';
 
 /* ========================= 编译 ========================= */
 const DEVTOOL = IS_DEVELOPMENT ? 'source-map' : 'nosources-source-map';
 
 const serverResolve = pathname => path.resolve(SERVER_PATH, pathname);
 const clientResolve = pathname => path.resolve(CLIENT_PATH, pathname);
+
+const conditionBack = (condition, value) => {
+    const res = {};
+    if (value instanceof Array) {
+        res = [];
+    }
+    return condition && value || res;
+};
 
 module.exports = {
     IS_PRODUCT,
@@ -40,5 +48,6 @@ module.exports = {
     serverResolve,
     clientResolve,
     IS_CLIENT,
-    IS_SERVER
+    IS_SERVER,
+    conditionBack
 };

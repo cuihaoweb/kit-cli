@@ -5,16 +5,8 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 const CopyPlugin = require('copy-webpack-plugin');
 const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
-const {MODE, ENTRY, OUTPUT, PUBLIC_PATH, DEVTOOL, SRC_PATH, IS_PRODUCT, IS_DEVELOPMENT} = require('./config.js');
+const {MODE, ENTRY, OUTPUT, PUBLIC_PATH, DEVTOOL, SRC_PATH, IS_PRODUCT, IS_DEVELOPMENT, conditionBack} = require('./config.js');
 
-
-const conditionBack = (condition, value) => {
-    const res = {};
-    if (value instanceof Array) {
-        res = [];
-    }
-    return condition && value || res;
-};
 
 const baseStyleLoaderConf = [
     IS_PRODUCT

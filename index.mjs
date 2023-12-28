@@ -2,21 +2,17 @@
 import { program } from 'commander';
 import { input, checkbox, confirm, select } from '@inquirer/prompts';
 import ora from 'ora';
-import fs, { constants } from 'fs';
+// import fs, { constants } from 'fs';
+import fs from 'fs-extra';
 import path, { dirname } from 'path';
 import chalk from 'chalk';
 import deepMerge from 'deepmerge';
 import npmFetch from 'npm-registry-fetch';
 import pLimit from 'p-limit';
 import { cpus } from 'os';
-// import { createFileMap as createViteFileMap } from './template/vite/index.js';
-import packagejson from './template/packagejson/index.js';
-import eslint from './template/eslint/index.js';
-import javascript from './template/javascript/index.js';
-import babel from './template/babel/index.js';
-import webpack from './template/webpack/index.js';
 import templateMap from './template/index.js';
-import { resolveApp, resolveCWD } from './utils.js';
+import sourceCode from './template/code/index.js';
+import { resolveApp, resolveCWD, conditionBack, recursiveChmod } from './utils.js';
 
 const limit = pLimit(cpus().length - 1);
 
@@ -30,34 +26,30 @@ program
             const context = {};
             let name = appName || '';
             !name && (name = await input({ message: '请输入应用名称', default: 'my-app' }));
-            const env = await select({ message: '请选择运行的环境', choices: [{ value: 'web' }, { value: 'node' }], default: 'web' });
+            // const env = await select({ message: '请选择运行的环境', choices: [{ value: 'web' }, { value: 'node' }], default: 'web' });
             const mode = await select({
                 message: '请选择项目的类型',
-                choices: (() => {
-                    const HANDLE_MAP = {
-                        web: () => [{ value: 'spa' }, { value: 'lib' }],
-                        node: () => [{ value: 'lib' }, { value: 'ssr' }, { value: 'server' }]
-                    };
-                    return HANDLE_MAP[env]();
-                })(),
-                default: 'lib'
+                choices: [{ value: 'spa' }, { value: 'ssr' }, { value: 'lib' }, { value: 'server' }, { value: 'component' }],
+                default: 'spa'
             });
-            const frame = await select({
-                message: '请选择使用的框架',
-                choices: (() => {
-                    if (mode === 'server') {
-                        return [{ value: 'express' }, { value: 'koa' }, { value: 'none' }];
-                    }
-                    return [{ value: 'vue' }, { value: 'react' }, { value: 'svelte' }, { value: 'none' }];
-                })(),
-                default: 'vue'
-            });
+            let frame = 'none';
+            if (mode !== 'lib') {
+                frame = await select({
+                    message: '请选择使用的框架',
+                    choices: (() => {
+                        if (mode === 'server') {
+                            return [{ value: 'express' }, { value: 'koa' }, { value: 'none' }];
+                        }
+                        return [{ value: 'react' }, { value: 'vue' }, { value: 'svelte' }, { value: 'none' }];
+                    })(),
+                    default: 'react'
+                });
+            }
             const language = await select({
                 message: '请选择要使用的语言',
                 choices: [{ value: 'javascript' }, { value: 'typescript' }],
                 default: 'javascript'
             });
-            const useEslint = await confirm({ message: '是否使用eslint', default: true });
             let [cssPreprocessor, useCssModule] = ['none', false];
             if (!['lib', 'server'].includes(mode)) {
                 cssPreprocessor = await select({
@@ -65,53 +57,62 @@ program
                     choices: [{ value: 'less' }, { value: 'scss' }, { value: 'none' }],
                     default: 'less'
                 });
-                useCssModule = await confirm({ message: '是否开启css module', default: true });
+                if (!['vue', 'svelte'].includes(frame)) {
+                    useCssModule = await confirm({ message: '是否开启css module', default: true });
+                }
             }
+            const useEslint = await confirm({ message: '是否使用eslint', default: true });
             let complier = 'webpack';
-            if (env === 'node' || ['ssr', 'lib'].includes(mode)) {
+            if (['ssr', 'lib'].includes(mode)) {
                 complier = 'vite';
             }
             Object.assign(context, {
-                name, language, frame, env, mode, useEslint, useCssModule,
+                name, language, frame, mode, useEslint, useCssModule,
                 cssPreprocessor, complier
             });
 
             /* ------------------------- 输出文件 ------------------------- */
             const spinner = ora('initializing').start();
             // ------------	公共文件 ------------
-            const TMP_DIR = resolveCWD('./tmp');
-            fs.mkdirSync(TMP_DIR, { recursive: true });
-            fs.cpSync(resolveApp('./template/base'), TMP_DIR, { recursive: true });
+            const WORKSPACE_DIR = resolveCWD(`./${name}`); // 工作目录
+            const basePath = resolveApp('./template/base');
+            await recursiveChmod(basePath, 0o777);
+            fs.cpSync(basePath, WORKSPACE_DIR, { recursive: true });
 
             // ------------	不同工具链配置 ------------
             const TASK_QUEUE = [
-                templateMap.babel,
+                ...conditionBack(complier === 'webpack', [
+                    templateMap.babel,
+                    templateMap.webpack
+                ], [templateMap.vite]),
                 templateMap.eslint,
-                templateMap.javascript,
-                complier === 'webpack' ? templateMap.webpack : templateMap.vite,
+                templateMap.javascript
             ];
-            const KIT_MAP = {
-                react:  ['react', 'react-dom'],
-                vue: ['vue', 'vue-router']
-            };
-            const dependencies = new Set(KIT_MAP[frame] || []);
-            const devDependencies = new Set(['rimraf', 'cross-env', 'wait-on', 'concurrently']);
+            const dependencies = new Set([
+                ...conditionBack(frame === 'react', ['react', 'react-dom']),
+                ...conditionBack(frame === 'vue', ['vue', 'vue-router']),
+                ...conditionBack(frame === 'svelte', ['svelte'])
+            ]);
+            const devDependencies = new Set([
+                'rimraf', 'cross-env',
+                ...conditionBack(['lib', 'ssr'].includes(mode), ['wait-on', 'concurrently'])
+            ]);
             await Promise.all(
                 TASK_QUEUE.map(func => limit(async () => {
-                    const fn = () => {};
-                    const {createFileMap = fn, getDeps = fn, getDevDeps = fn, name = ''} = func(context) || {};
+                    const fn = () => { };
+                    const { createFileMap = fn, getDeps = fn, getDevDeps = fn } = func(context) || {};
                     const fileMap = (await createFileMap()) || {};
                     const devDeps = (await getDevDeps()) || [];
                     const deps = (await getDeps()) || [];
 
                     Object.entries(fileMap).forEach(([filePath, getContent]) => {
-                        fs.writeFileSync(TMP_DIR + filePath, getContent() || '');
+                        fs.writeFileSync(WORKSPACE_DIR + filePath, getContent() || '');
                     });
 
                     deps.forEach(dep => dependencies.add(dep));
                     devDeps.forEach(devDep => devDependencies.add(devDep));
                 }))
-            )
+            );
 
             // ------------	依赖包	------------
             await Promise.all(
@@ -129,11 +130,23 @@ program
 
             // ------------	配置package.json文件 ------------
             try {
-                const {createFileMap, name = ''} = templateMap.packagejson(context);
+                const { createFileMap } = templateMap.packagejson(context);
                 Object.entries(await createFileMap()).forEach(([filePath, getContent]) => {
-                    fs.writeFileSync(TMP_DIR + filePath, getContent() || '');
+                    fs.writeFileSync(WORKSPACE_DIR + filePath, getContent() || '');
                 });
-            } catch {}
+            } catch (err) {
+                throw new Error(err);
+            }
+
+            // ------------ 拷贝源码 ------------
+            const { getCodePath } = sourceCode(context);
+            const codePath = resolveApp('./template/code', getCodePath());
+            /**
+             * 拷贝文件
+             * 1. 拷贝文件之前，需要确保文件有读写的权限，否则递归拷贝的过程中会报错
+             */
+            await recursiveChmod(codePath, 0o777);
+            fs.cpSync(codePath, WORKSPACE_DIR, { recursive: true });
 
             spinner.succeed('create project succeed');
             console.log(chalk.green(

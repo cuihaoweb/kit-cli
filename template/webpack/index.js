@@ -1,4 +1,5 @@
 import ejs from 'ejs';
+import {conditionBack} from '../../utils.js';
 import webpackTemplate from './webpack.config.js.ejs?raw';
 import webpackAnalyzeTemplate from './webpack.analyze.js.ejs?raw';
 
@@ -23,10 +24,10 @@ export default context => {
                 'add-asset-html-webpack-plugin',
                 'webpack-bundle-analyzer',
                 'babel-loader',
-                'less-loader',
                 'css-loader',
                 'style-loader',
-                'postcss-loader'
+                'postcss-loader',
+                ...conditionBack(context.cssPreprocessor === 'less', ['less', 'less-loader']),
             ].filter(Boolean);
         }
     };

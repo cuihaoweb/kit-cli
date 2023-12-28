@@ -1,4 +1,7 @@
-{
+{ 
+<%_ if (frame === 'svelte') { _%>
+    "extends": "@tsconfig/svelte/tsconfig.json",
+<%_ } _%>
     "compilerOptions": {
         "baseUrl": ".",
         "outDir": ".",

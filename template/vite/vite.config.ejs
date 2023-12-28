@@ -3,22 +3,47 @@ import { VitePluginNode } from 'vite-plugin-node';
 import path from 'path';
 import {fileURLToPath} from 'url';
 import {dirname, resolve} from 'path';
+import {IS_SERVER, conditionBack} from './build/config';
+<%_ if (frame === 'svelte') { _%>
+import {svelte} from '@sveltejs/vite-plugin-svelte';
+<%_ } _%>
 
 const CWD_PATH = process.cwd();
 const resolveApp = (...paths) => path.resolve(CWD_PATH, ...paths);
 
 export default defineConfig({
     build: {
+    <%_ if (mode === 'lib') { _%>
         lib: {
             entry: resolveApp('./index.js'),
             formats: ['es'],
             name: 'kit-cli',
             fileName: '[name].js'
-        }
+        },
+    <%_ } _%>
+    <%_ if (mode === 'ssr') { _%>
+        ...conditionBack(IS_SERVER, {
+            lib: {
+                entry: 'src/entry-server.ts',
+            }
+        }),
+        outDir: IS_SERVER ? 'dist/server' : 'dist/client',
+    <%_ } _%>
     },
     plugins: [
+    <%_ if (mode === 'server') { _%>
         ...VitePluginNode({
             appPath: resolveApp('./index.js'),
+        }),
+    <%_ } _%>
+    <%_ if (frame === 'svelte') { _%>
+        svelte({
+        <%_ if (mode === 'ssr') { _%>
+            compilerOptions: {
+                hydratable: true
+            }
+        <%_ } _%>
         })
+    <%_ } _%>
     ]
 });

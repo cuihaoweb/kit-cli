@@ -1,4 +1,5 @@
 import ejs from 'ejs';
+import {conditionBack} from '../../utils.js';
 import jsTemplate from './jsconfig.json.ejs?raw';
 import tsTemplate from './tsconfig.json.ejs?raw';
 
@@ -11,18 +12,17 @@ export default context => {
                 '/jsconfig.json': () => {
                     return ejs.render(jsTemplate, context);
                 },
-                '/tsconfig.json': () => {
-                    return ejs.render(tsTemplate, context);
-                }
+                ...(context.language === 'typescript' && {
+                    '/tsconfig.json': () => ejs.render(tsTemplate, context)
+                } || {})
             };
         },
         getDeps: () => [],
         getDevDeps: () => {
             return [
-                'typescript',
-                ...(context.useCssModule && [
-                    'typescript-plugin-css-modules'
-                ] || [])
+                ...conditionBack(context.language === 'typescript', ['typescript', 'tslib']),
+                ...conditionBack(context.frame === 'svelte', ['@tsconfig/svelte']),
+                ...conditionBack(context.useCssModule, ['typescript-plugin-css-modules'])
             ].filter(Boolean);
         }
     };
