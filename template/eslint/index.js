@@ -5,6 +5,7 @@ import eslintrcTemplate from './.eslintrc.ejs?raw';
 
 export default context => {
     return {
+        name: 'eslint',
         createFileMap: () => {
             return {
                 '/.eslintrc.js': () => ejs.render(eslintrcTemplate, context),

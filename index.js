@@ -43,6 +43,7 @@ const packageTemplate = `{
 `;
 const packagejson = (context) => {
   return {
+    name: "package.json",
     createFileMap: () => {
       return {
         "/package.json": () => ejs.render(packageTemplate, context)
@@ -54,6 +55,7 @@ const eslintignoreTemplate = "node_modules\n\ndist\ndll\nlib\n\ncoverage\n\npubl
 const eslintrcTemplate = "module.exports = {\n    root: true,\n    env: {\n        browser: true,\n        es2021: true,\n        node: true,\n        jest: true\n    },\n    extends: ['eslint:recommended'],\n    overrides: [\n    <%_ if (language === 'typescript') { _%>\n        {\n            files: ['*.ts', '*.tsx'],\n            extends: ['plugin:@typescript-eslint/recommended'],\n            parser: '@typescript-eslint/parser',\n            plugins: ['@typescript-eslint'],\n            rules: {\n                '@typescript-eslint/no-var-requires': [0],\n                '@typescript-eslint/no-namespace': [0],\n                '@typescript-eslint/no-empty-function': [1],\n                '@typescript-eslint/no-explicit-any': [1],\n                '@typescript-eslint/ban-types': [1]\n            }\n        },\n    <%_ } _%>\n    <%_ if (frame === 'react') { _%>\n        {\n            files: ['*.jsx', '*.tsx'],\n            extends: ['plugin:react/recommended', 'plugin:react/jsx-runtime', 'plugin:react-hooks/recommended'],\n            rules: {\n                'react/no-unknown-property': ['error', {ignore: ['styleName']}],\n                'react/prop-types': [0],\n                'react/display-name': [0],\n                'react/self-closing-comp': ['error', {component: true, html: true}], // 自闭合\n                'react/jsx-props-no-multi-spaces': ['error']\n            }\n        },\n    <%_ } else if (frame === 'vue') { _%>\n        {\n            files: ['*.vue'],\n            extends: ['plugin:vue/vue3-recommended'],\n            parser: 'vue-eslint-parser',\n            parserOptions: {parser: '@typescript-eslint/parser'},\n            rules: {'vue/html-indent': [2, 4]}\n        }\n    <%_ } _%>\n    ],\n    parserOptions: {\n        ecmaVersion: 'latest',\n        sourceType: 'module'\n    },\n    plugins: ['simple-import-sort'],\n    rules: {\n        'max-len': ['error', {code: 120}], // 允许一行最大的长度\n\n        // 缩进\n        indent: [2, 4],\n\n        // 引号\n        quotes: [2, 'single'],\n\n        'arrow-parens': ['error', 'as-needed'], // 剪头函数一个参数时不需要圆括号\n\n        // 对象属性引号\n        'quote-props': [2, 'as-needed'],\n\n        // 对象最后一项不加,\n        'comma-dangle': [2, 'never'],\n\n        // 末尾加;\n        semi: ['error', 'always'],\n\n        // 行不允许空格\n        'no-trailing-spaces': [2],\n\n        // 大括号空格\n        'object-curly-spacing': [2, 'never'],\n\n        'object-curly-newline': [2,  {consistent: true}], // 对象头尾是否换行\n\n        'object-property-newline': [2, {allowAllPropertiesOnSameLine: true}], // 对象属性是否折行，动态适应\n\n        'key-spacing': ['error', {afterColon: true}], // 冒号后留空格\n\n        'comma-spacing': ['error', {after: true}], // 逗号后留空格\n\n        // 文件结尾空行\n        'eol-last': [2, 'always'],\n\n        // 空行的数量\n        'no-multiple-empty-lines': [2, {max: 2, maxEOF: 1}],\n\n        'no-case-declarations': [0],\n\n        'keyword-spacing': [2],\n\n        'no-shadow': [2], // 重复定义\n\n        'no-redeclare': [2],\n\n        'no-empty': [2, {allowEmptyCatch: true}],\n\n        'no-unused-vars': [2],\n\n        // 针对import排序\n        'simple-import-sort/imports': [1, {\n            groups: [['^node:', '^[a-zA-Z]', '^@[a-zA-Z]', '^@\\\\/', '^\\\\/', '^\\\\.', '^\\\\u0000']]\n        }],\n\n        'simple-import-sort/exports': [1]\n    }\n};\n";
 const eslint = (context) => {
   return {
+    name: "eslint",
     createFileMap: () => {
       return {
         "/.eslintrc.js": () => ejs.render(eslintrcTemplate, context),
@@ -127,6 +129,7 @@ const tsTemplate = `{
 }`;
 const javascript = (context) => {
   return {
+    name: "javascript/typescript",
     createFileMap: () => {
       return {
         "/jsconfig.json": () => {
@@ -151,6 +154,7 @@ const javascript = (context) => {
 const template = "const {resolve} = require('path');\nconst {IS_DEVELOPMENT, IS_PRODUCT} = require('./build/config');\n\nmodule.exports = {\n    presets: [\n        ['@babel/preset-env', {\n            targets: {\n                browsers: ['ie >= 8', 'iOS 7']\n            },\n            useBuiltIns: 'usage',\n            corejs: 3\n        }],\n    <%_ if (frame === 'react') { _%>\n        ['@babel/preset-react', {\n            runtime: 'automatic',\n            development: IS_DEVELOPMENT\n        }],\n    <%_ } _%>\n    <%_ if (language === 'typescript') { _%>\n        ['@babel/preset-typescript', {\n        }]\n    <%_ } _%>\n    ].filter(Boolean),\n    plugins: [\n    <%_ if (frame === 'react') { _%>\n        IS_DEVELOPMENT && \"react-refresh/babel\",\n    <%_ } _%>\n        // 'macros',\n        // ['import', {\n        //     libraryName: 'antd',\n        //     style: true,\n        //     libraryDirectory: 'lib'\n        // }, 'antd'],\n        ['import', {\n            libraryName: 'react-components',\n            style: name => `${name}/index.css`,\n            libraryDirectory: 'lib',\n        }, 'react-components'],\n    ].filter(Boolean)\n};";
 const babel = (context) => {
   return {
+    name: "babel",
     createFileMap: () => {
       return {
         "/.babelrc.js": () => {
@@ -179,6 +183,7 @@ const webpackTemplate = "const path = require('path');\nconst webpack = require(
 const webpackAnalyzeTemplate = "const {merge} = require('webpack-merge');\nconst webpackConfigProd = require('./webpack.prod');\nconst BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;\n\n/** @type{import('webpack').Configuration}*/\nmodule.exports = merge(webpackConfigProd, {\n    plugins: [\n        new BundleAnalyzerPlugin()\n    ]\n});\n";
 const webpack = (context) => {
   return {
+    name: "webpack",
     createFileMap: () => {
       return {
         "/build/webpack.config.js": () => ejs.render(webpackTemplate, context),
@@ -203,6 +208,31 @@ const webpack = (context) => {
       ].filter(Boolean);
     }
   };
+};
+const viteTemplate = "import { defineConfig } from 'vite';\nimport { VitePluginNode } from 'vite-plugin-node';\nimport path from 'path';\nimport {fileURLToPath} from 'url';\nimport {dirname, resolve} from 'path';\n\nconst CWD_PATH = process.cwd();\nconst resolveApp = (...paths) => path.resolve(CWD_PATH, ...paths);\n\nexport default defineConfig({\n    build: {\n        lib: {\n            entry: resolveApp('./index.js'),\n            formats: ['es'],\n            name: 'kit-cli',\n            fileName: '[name].js'\n        }\n    },\n    plugins: [\n        ...VitePluginNode({\n            appPath: resolveApp('./index.js'),\n        })\n    ]\n});\n";
+const vite = (context) => {
+  return {
+    name: "vite",
+    createFileMap: () => {
+      return {
+        "/vite.config.js": () => ejs.render(viteTemplate, context)
+      };
+    },
+    getDeps: () => [],
+    getDevDeps: () => {
+      return [
+        "vite"
+      ].filter(Boolean);
+    }
+  };
+};
+const templateMap = {
+  vite,
+  webpack,
+  babel,
+  eslint,
+  javascript,
+  packagejson
 };
 const curDirname = () => dirname(fileURLToPath(import.meta.url));
 const resolveApp = (...paths) => path.resolve(curDirname(), ...paths);
@@ -266,114 +296,56 @@ program.command("create").argument("[appName]", "appName").description("create a
       cssPreprocessor,
       complier
     });
+    const spinner = ora("initializing").start();
     const TMP_DIR = resolveCWD("./tmp");
     fs.mkdirSync(TMP_DIR, { recursive: true });
-    const spinner = ora("initializing").start();
-    await Promise.all(
-      ["rimraf", "cross-env"].map((dep) => limit(async () => {
-        const { version } = await npmFetch.json(`/${dep}/latest`);
-        Object.assign(context, deepMerge(context, { devDependencies: { [dep]: `^${version}` } }));
-      }))
-    );
-    await Promise.all(
-      ["react", "react-dom"].map((dep) => limit(async () => {
-        const { version } = await npmFetch.json(`/${dep}/latest`);
-        Object.assign(context, deepMerge(context, { dependencies: { [dep]: `^${version}` } }));
-      }))
-    );
     fs.cpSync(resolveApp("./template/base"), TMP_DIR, { recursive: true });
-    if (complier === "webpack") {
-      spinner.stop();
-      const javascriptSpinner2 = ora("initializing webpack").start();
-      const { createFileMap, getDevDeps, getDeps } = webpack(context);
-      const fileMap = createFileMap();
-      Object.keys(fileMap).forEach((key) => {
-        const content = fileMap[key]();
-        fs.writeFileSync(TMP_DIR + key, content);
-      });
-      await Promise.all(
-        (await getDevDeps()).map((dep) => limit(async () => {
-          const { version } = await npmFetch.json(`/${dep}/latest`);
-          Object.assign(context, deepMerge(context, { devDependencies: { [dep]: `^${version}` } }));
-        }))
-      );
-      await Promise.all(
-        (await getDeps()).map((dep) => limit(async () => {
-          const { version } = await npmFetch.json(`/${dep}/latest`);
-          Object.assign(context, deepMerge(context, { dependencies: { [dep]: `^${version}` } }));
-        }))
-      );
-      javascriptSpinner2.succeed("create webpack succeed");
-      spinner.start();
-    }
-    spinner.stop();
-    const javascriptSpinner = ora("initializing javascript").start();
-    const { createFileMap: createJavascriptFileMap, getDevDeps: getJavascriptDevDeps, getDeps: getJavascriptDeps } = javascript(context);
-    const javascriptFileMap = createJavascriptFileMap();
-    Object.keys(javascriptFileMap).forEach((key) => {
-      const content = javascriptFileMap[key]();
-      fs.writeFileSync(TMP_DIR + key, content);
-    });
+    const TASK_QUEUE = [
+      templateMap.babel,
+      templateMap.eslint,
+      templateMap.javascript,
+      complier === "webpack" ? templateMap.webpack : templateMap.vite
+    ];
+    const KIT_MAP = {
+      react: ["react", "react-dom"],
+      vue: ["vue", "vue-router"]
+    };
+    const dependencies = new Set(KIT_MAP[frame] || []);
+    const devDependencies = /* @__PURE__ */ new Set(["rimraf", "cross-env", "wait-on", "concurrently"]);
     await Promise.all(
-      (await getJavascriptDevDeps()).map((dep) => limit(async () => {
-        const { version } = await npmFetch.json(`/${dep}/latest`);
-        Object.assign(context, deepMerge(context, { devDependencies: { [dep]: `^${version}` } }));
+      TASK_QUEUE.map((func) => limit(async () => {
+        const fn = () => {
+        };
+        const { createFileMap = fn, getDeps = fn, getDevDeps = fn, name: name2 = "" } = func(context) || {};
+        const fileMap = await createFileMap() || {};
+        const devDeps = await getDevDeps() || [];
+        const deps = await getDeps() || [];
+        Object.entries(fileMap).forEach(([filePath, getContent]) => {
+          fs.writeFileSync(TMP_DIR + filePath, getContent() || "");
+        });
+        deps.forEach((dep) => dependencies.add(dep));
+        devDeps.forEach((devDep) => devDependencies.add(devDep));
       }))
     );
     await Promise.all(
-      (await getJavascriptDeps()).map((dep) => limit(async () => {
+      [...dependencies].map((dep) => limit(async () => {
         const { version } = await npmFetch.json(`/${dep}/latest`);
         Object.assign(context, deepMerge(context, { dependencies: { [dep]: `^${version}` } }));
       }))
     );
-    javascriptSpinner.succeed("create eslint succeed");
-    spinner.start();
-    spinner.stop();
-    const babelSpinner = ora("initializing babel").start();
-    const { createFileMap: createBabelFileMap, getDevDeps: getBabelDevDeps, getDeps: getBabelDeps } = babel(context);
-    const babelFileMap = createBabelFileMap();
-    Object.keys(babelFileMap).forEach((key) => {
-      const content = babelFileMap[key]();
-      fs.writeFileSync(TMP_DIR + key, content);
-    });
     await Promise.all(
-      (await getBabelDevDeps()).map((dep) => limit(async () => {
+      [...devDependencies].map((dep) => limit(async () => {
         const { version } = await npmFetch.json(`/${dep}/latest`);
         Object.assign(context, deepMerge(context, { devDependencies: { [dep]: `^${version}` } }));
       }))
     );
-    await Promise.all(
-      (await getBabelDeps()).map((dep) => limit(async () => {
-        const { version } = await npmFetch.json(`/${dep}/latest`);
-        Object.assign(context, deepMerge(context, { dependencies: { [dep]: `^${version}` } }));
-      }))
-    );
-    babelSpinner.succeed("create babel succeed");
-    spinner.start();
-    if (useEslint) {
-      spinner.stop();
-      const eslintSpinner = ora("initializing eslint").start();
-      const { createFileMap: createEslintFileMap, getDevDeps } = eslint(context);
-      const eslintFileMap = createEslintFileMap();
-      Object.keys(eslintFileMap).forEach((key) => {
-        const content = eslintFileMap[key]();
-        fs.writeFileSync(TMP_DIR + key, content);
+    try {
+      const { createFileMap, name: name2 = "" } = templateMap.packagejson(context);
+      Object.entries(await createFileMap()).forEach(([filePath, getContent]) => {
+        fs.writeFileSync(TMP_DIR + filePath, getContent() || "");
       });
-      await Promise.all(
-        (await getDevDeps()).map((dep) => limit(async () => {
-          const { version } = await npmFetch.json(`/${dep}/latest`);
-          Object.assign(context, deepMerge(context, { devDependencies: { [dep]: `^${version}` } }));
-        }))
-      );
-      eslintSpinner.succeed("create eslint succeed");
-      spinner.start();
+    } catch {
     }
-    const { createFileMap: createPackageJsonFileMap } = packagejson(context);
-    const packageJsonFileMap = createPackageJsonFileMap(context);
-    Object.keys(packageJsonFileMap).forEach((key) => {
-      const content = packageJsonFileMap[key]();
-      fs.writeFileSync(TMP_DIR + key, content);
-    });
     spinner.succeed("create project succeed");
     console.log(chalk.green(
       [

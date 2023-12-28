@@ -8,30 +8,6 @@ module.exports = {
     },
     extends: ['eslint:recommended'],
     overrides: [
-        {
-            files: ['*.ts', '*.tsx'],
-            extends: ['plugin:@typescript-eslint/recommended'],
-            parser: '@typescript-eslint/parser',
-            plugins: ['@typescript-eslint'],
-            rules: {
-                '@typescript-eslint/no-var-requires': [0],
-                '@typescript-eslint/no-namespace': [0],
-                '@typescript-eslint/no-empty-function': [1],
-                '@typescript-eslint/no-explicit-any': [1],
-                '@typescript-eslint/ban-types': [1]
-            }
-        },
-        {
-            files: ['*.jsx', '*.tsx'],
-            extends: ['plugin:react/recommended', 'plugin:react/jsx-runtime', 'plugin:react-hooks/recommended'],
-            rules: {
-                'react/no-unknown-property': ['error', {ignore: ['styleName']}],
-                'react/prop-types': [0],
-                'react/display-name': [0],
-                'react/self-closing-comp': ['error', {component: true, html: true}], // 自闭合
-                'react/jsx-props-no-multi-spaces': ['error']
-            }
-        },
     ],
     parserOptions: {
         ecmaVersion: 'latest',

@@ -4,6 +4,7 @@ import template from './.babelrc.js.ejs?raw';
 
 export default context => {
     return {
+        name: 'babel',
         createFileMap: () => {
             return {
                 '/.babelrc.js': () => {

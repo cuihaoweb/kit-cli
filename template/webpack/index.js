@@ -5,6 +5,7 @@ import webpackAnalyzeTemplate from './webpack.analyze.js.ejs?raw';
 
 export default context => {
     return {
+        name: 'webpack',
         createFileMap: () => {
             return {
                 '/build/webpack.config.js': () => ejs.render(webpackTemplate, context),

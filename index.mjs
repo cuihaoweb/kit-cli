@@ -15,6 +15,7 @@ import eslint from './template/eslint/index.js';
 import javascript from './template/javascript/index.js';
 import babel from './template/babel/index.js';
 import webpack from './template/webpack/index.js';
+import templateMap from './template/index.js';
 import { resolveApp, resolveCWD } from './utils.js';
 
 const limit = pLimit(cpus().length - 1);
@@ -25,6 +26,7 @@ program
     .description('create app')
     .action(async (appName) => {
         try {
+            /* ------------------------- 配置输入 ------------------------- */
             const context = {};
             let name = appName || '';
             !name && (name = await input({ message: '请输入应用名称', default: 'my-app' }));
@@ -56,7 +58,6 @@ program
                 default: 'javascript'
             });
             const useEslint = await confirm({ message: '是否使用eslint', default: true });
-
             let [cssPreprocessor, useCssModule] = ['none', false];
             if (!['lib', 'server'].includes(mode)) {
                 cssPreprocessor = await select({
@@ -66,147 +67,73 @@ program
                 });
                 useCssModule = await confirm({ message: '是否开启css module', default: true });
             }
-
             let complier = 'webpack';
             if (env === 'node' || ['ssr', 'lib'].includes(mode)) {
                 complier = 'vite';
             }
-
             Object.assign(context, {
                 name, language, frame, env, mode, useEslint, useCssModule,
                 cssPreprocessor, complier
             });
 
+            /* ------------------------- 输出文件 ------------------------- */
+            const spinner = ora('initializing').start();
+            // ------------	公共文件 ------------
             const TMP_DIR = resolveCWD('./tmp');
             fs.mkdirSync(TMP_DIR, { recursive: true });
-
-            const spinner = ora('initializing').start();
-
-            // 基础依赖
-            await Promise.all(
-                ['rimraf', 'cross-env'].map(dep => limit(async () => {
-                    const { version } = await npmFetch.json(`/${dep}/latest`);
-                    Object.assign(context, deepMerge(context, { devDependencies: { [dep]: `^${version}` } }));
-                }))
-            );
-            await Promise.all(
-                ['react', 'react-dom'].map(dep => limit(async () => {
-                    const { version } = await npmFetch.json(`/${dep}/latest`);
-                    Object.assign(context, deepMerge(context, { dependencies: { [dep]: `^${version}` } }));
-                }))
-            );
-
-            // .vscode 相关配置
             fs.cpSync(resolveApp('./template/base'), TMP_DIR, { recursive: true });
 
-            // // vite相关配置
-            // const viteFileMap = createViteFileMap(context);
-            // Object.keys(viteFileMap).forEach(key => {
-            //     const content = viteFileMap[key]();
-            //     fs.writeFileSync(TMP_DIR + key, content);
-            // });
-
-            // webpack相关配置
-            if (complier === 'webpack') {
-                spinner.stop();
-                const javascriptSpinner = ora('initializing webpack').start();
-                const { createFileMap, getDevDeps, getDeps } = webpack(context);
-                const fileMap = createFileMap();
-                Object.keys(fileMap).forEach(key => {
-                    const content = fileMap[key]();
-                    fs.writeFileSync(TMP_DIR + key, content);
-                });
-                await Promise.all(
-                    (await getDevDeps()).map(dep => limit(async () => {
-                        const { version } = await npmFetch.json(`/${dep}/latest`);
-                        Object.assign(context, deepMerge(context, { devDependencies: { [dep]: `^${version}` } }));
-                    }))
-                );
-                await Promise.all(
-                    (await getDeps()).map(dep => limit(async () => {
-                        const { version } = await npmFetch.json(`/${dep}/latest`);
-                        Object.assign(context, deepMerge(context, { dependencies: { [dep]: `^${version}` } }));
-                    }))
-                );
-                javascriptSpinner.succeed('create webpack succeed');
-                spinner.start();
-            }
-
-            // jsconfig.json
-            spinner.stop();
-            const javascriptSpinner = ora('initializing javascript').start();
-            const { createFileMap: createJavascriptFileMap, getDevDeps: getJavascriptDevDeps, getDeps: getJavascriptDeps } = javascript(context);
-            const javascriptFileMap = createJavascriptFileMap();
-            Object.keys(javascriptFileMap).forEach(key => {
-                const content = javascriptFileMap[key]();
-                fs.writeFileSync(TMP_DIR + key, content);
-            });
+            // ------------	不同工具链配置 ------------
+            const TASK_QUEUE = [
+                templateMap.babel,
+                templateMap.eslint,
+                templateMap.javascript,
+                complier === 'webpack' ? templateMap.webpack : templateMap.vite,
+            ];
+            const KIT_MAP = {
+                react:  ['react', 'react-dom'],
+                vue: ['vue', 'vue-router']
+            };
+            const dependencies = new Set(KIT_MAP[frame] || []);
+            const devDependencies = new Set(['rimraf', 'cross-env', 'wait-on', 'concurrently']);
             await Promise.all(
-                (await getJavascriptDevDeps()).map(dep => limit(async () => {
-                    const { version } = await npmFetch.json(`/${dep}/latest`);
-                    Object.assign(context, deepMerge(context, { devDependencies: { [dep]: `^${version}` } }));
+                TASK_QUEUE.map(func => limit(async () => {
+                    const fn = () => {};
+                    const {createFileMap = fn, getDeps = fn, getDevDeps = fn, name = ''} = func(context) || {};
+                    const fileMap = (await createFileMap()) || {};
+                    const devDeps = (await getDevDeps()) || [];
+                    const deps = (await getDeps()) || [];
+
+                    Object.entries(fileMap).forEach(([filePath, getContent]) => {
+                        fs.writeFileSync(TMP_DIR + filePath, getContent() || '');
+                    });
+
+                    deps.forEach(dep => dependencies.add(dep));
+                    devDeps.forEach(devDep => devDependencies.add(devDep));
                 }))
-            );
+            )
+
+            // ------------	依赖包	------------
             await Promise.all(
-                (await getJavascriptDeps()).map(dep => limit(async () => {
+                [...dependencies].map(dep => limit(async () => {
                     const { version } = await npmFetch.json(`/${dep}/latest`);
                     Object.assign(context, deepMerge(context, { dependencies: { [dep]: `^${version}` } }));
                 }))
             );
-            javascriptSpinner.succeed('create eslint succeed');
-            spinner.start();
-
-            // // babel
-            spinner.stop();
-            const babelSpinner = ora('initializing babel').start();
-            const { createFileMap: createBabelFileMap, getDevDeps: getBabelDevDeps, getDeps: getBabelDeps } = babel(context);
-            const babelFileMap = createBabelFileMap();
-            Object.keys(babelFileMap).forEach(key => {
-                const content = babelFileMap[key]();
-                fs.writeFileSync(TMP_DIR + key, content);
-            });
             await Promise.all(
-                (await getBabelDevDeps()).map(dep => limit(async () => {
+                [...devDependencies].map(dep => limit(async () => {
                     const { version } = await npmFetch.json(`/${dep}/latest`);
                     Object.assign(context, deepMerge(context, { devDependencies: { [dep]: `^${version}` } }));
                 }))
             );
-            await Promise.all(
-                (await getBabelDeps()).map(dep => limit(async () => {
-                    const { version } = await npmFetch.json(`/${dep}/latest`);
-                    Object.assign(context, deepMerge(context, { dependencies: { [dep]: `^${version}` } }));
-                }))
-            );
-            babelSpinner.succeed('create babel succeed');
-            spinner.start();
 
-            // eslint相关配置
-            if (useEslint) {
-                spinner.stop();
-                const eslintSpinner = ora('initializing eslint').start();
-                const { createFileMap: createEslintFileMap, getDevDeps } = eslint(context);
-                const eslintFileMap = createEslintFileMap();
-                Object.keys(eslintFileMap).forEach(key => {
-                    const content = eslintFileMap[key]();
-                    fs.writeFileSync(TMP_DIR + key, content);
+            // ------------	配置package.json文件 ------------
+            try {
+                const {createFileMap, name = ''} = templateMap.packagejson(context);
+                Object.entries(await createFileMap()).forEach(([filePath, getContent]) => {
+                    fs.writeFileSync(TMP_DIR + filePath, getContent() || '');
                 });
-                await Promise.all(
-                    (await getDevDeps()).map(dep => limit(async () => {
-                        const { version } = await npmFetch.json(`/${dep}/latest`);
-                        Object.assign(context, deepMerge(context, { devDependencies: { [dep]: `^${version}` } }));
-                    }))
-                );
-                eslintSpinner.succeed('create eslint succeed');
-                spinner.start();
-            }
-
-            // package.json
-            const { createFileMap: createPackageJsonFileMap } = packagejson(context);
-            const packageJsonFileMap = createPackageJsonFileMap(context);
-            Object.keys(packageJsonFileMap).forEach(key => {
-                const content = packageJsonFileMap[key]();
-                fs.writeFileSync(TMP_DIR + key, content);
-            });
+            } catch {}
 
             spinner.succeed('create project succeed');
             console.log(chalk.green(

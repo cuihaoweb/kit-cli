@@ -5,6 +5,7 @@ import tsTemplate from './tsconfig.json.ejs?raw';
 
 export default context => {
     return {
+        name: 'javascript/typescript',
         createFileMap: () => {
             return {
                 '/jsconfig.json': () => {
