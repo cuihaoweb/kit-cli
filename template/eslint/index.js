@@ -1,6 +1,6 @@
 import ejs from 'ejs';
 import eslintignoreTemplate from './.eslintignore.ejs?raw';
-import eslintrcTemplate from './.eslintrc.ejs?raw';
+import eslintrcTemplate from './.eslintrc.cjs.ejs?raw';
 
 
 export default context => {
@@ -8,7 +8,7 @@ export default context => {
         name: 'eslint',
         createFileMap: () => {
             return {
-                '/.eslintrc.js': () => ejs.render(eslintrcTemplate, context),
+                '/.eslintrc.cjs': () => ejs.render(eslintrcTemplate, context),
                 '/.eslintignore': () => eslintignoreTemplate
             };
         },

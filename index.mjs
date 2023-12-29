@@ -2,7 +2,6 @@
 import { program } from 'commander';
 import { input, checkbox, confirm, select } from '@inquirer/prompts';
 import ora from 'ora';
-// import fs, { constants } from 'fs';
 import fs from 'fs-extra';
 import path, { dirname } from 'path';
 import chalk from 'chalk';
@@ -26,12 +25,15 @@ program
             const context = {};
             let name = appName || '';
             !name && (name = await input({ message: '请输入应用名称', default: 'my-app' }));
-            // const env = await select({ message: '请选择运行的环境', choices: [{ value: 'web' }, { value: 'node' }], default: 'web' });
             const mode = await select({
                 message: '请选择项目的类型',
                 choices: [{ value: 'spa' }, { value: 'ssr' }, { value: 'lib' }, { value: 'server' }, { value: 'component' }],
                 default: 'spa'
             });
+            let env = 'web';
+            if (['lib'].includes(mode)) {
+                env = await select({ message: '请选择运行的环境', choices: [{ value: 'web' }, { value: 'node' }], default: 'web' });
+            }
             let frame = 'none';
             if (mode !== 'lib') {
                 frame = await select({
@@ -68,7 +70,7 @@ program
             }
             Object.assign(context, {
                 name, language, frame, mode, useEslint, useCssModule,
-                cssPreprocessor, complier
+                cssPreprocessor, complier, env
             });
 
             /* ------------------------- 输出文件 ------------------------- */
@@ -91,7 +93,8 @@ program
             const dependencies = new Set([
                 ...conditionBack(frame === 'react', ['react', 'react-dom']),
                 ...conditionBack(frame === 'vue', ['vue', 'vue-router']),
-                ...conditionBack(frame === 'svelte', ['svelte'])
+                ...conditionBack(frame === 'svelte', ['svelte']),
+                ...conditionBack(mode === 'ssr', ['express', 'compression', 'sirv'])
             ]);
             const devDependencies = new Set([
                 'rimraf', 'cross-env',
@@ -147,6 +150,9 @@ program
              */
             await recursiveChmod(codePath, 0o777);
             fs.cpSync(codePath, WORKSPACE_DIR, { recursive: true });
+
+            // ------------ 整体修改文件权限 ------------
+            await recursiveChmod(WORKSPACE_DIR, 0o777);
 
             spinner.succeed('create project succeed');
             console.log(chalk.green(

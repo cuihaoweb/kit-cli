@@ -19,7 +19,8 @@ export default context => {
                     context.frame === 'svelte' && context.mode === 'ssr',
                     ['@sveltejs/vite-plugin-svelte']
                 ),
-                ...conditionBack(context.cssPreprocessor === 'less', ['less'])
+                ...conditionBack(context.cssPreprocessor === 'less', ['less']),
+                ...conditionBack(context.env === 'node', ['vite-plugin-node'])
             ].filter(Boolean);
         }
     };

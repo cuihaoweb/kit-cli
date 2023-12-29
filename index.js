@@ -11,7 +11,7 @@ import pLimit from "p-limit";
 import { cpus } from "os";
 import ejs from "ejs";
 import { fileURLToPath } from "url";
-const viteTemplate = "import { defineConfig } from 'vite';\nimport { VitePluginNode } from 'vite-plugin-node';\nimport path from 'path';\nimport {fileURLToPath} from 'url';\nimport {dirname, resolve} from 'path';\nimport {IS_SERVER, conditionBack} from './build/config';\n<%_ if (frame === 'svelte') { _%>\nimport {svelte} from '@sveltejs/vite-plugin-svelte';\n<%_ } _%>\n\nconst CWD_PATH = process.cwd();\nconst resolveApp = (...paths) => path.resolve(CWD_PATH, ...paths);\n\nexport default defineConfig({\n    build: {\n    <%_ if (mode === 'lib') { _%>\n        lib: {\n            entry: resolveApp('./index.js'),\n            formats: ['es'],\n            name: 'kit-cli',\n            fileName: '[name].js'\n        },\n    <%_ } _%>\n    <%_ if (mode === 'ssr') { _%>\n        ...conditionBack(IS_SERVER, {\n            lib: {\n                entry: 'src/entry-server.ts',\n            }\n        }),\n        outDir: IS_SERVER ? 'dist/server' : 'dist/client',\n    <%_ } _%>\n    },\n    plugins: [\n    <%_ if (mode === 'server') { _%>\n        ...VitePluginNode({\n            appPath: resolveApp('./index.js'),\n        }),\n    <%_ } _%>\n    <%_ if (frame === 'svelte') { _%>\n        svelte({\n        <%_ if (mode === 'ssr') { _%>\n            compilerOptions: {\n                hydratable: true\n            }\n        <%_ } _%>\n        })\n    <%_ } _%>\n    ]\n});\n";
+const viteTemplate = "import { defineConfig } from 'vite';\n<%_ if (env === 'node') { _%>\nimport { VitePluginNode } from 'vite-plugin-node';\n<%_ } _%>\nimport path from 'path';\nimport {fileURLToPath} from 'url';\nimport {dirname, resolve} from 'path';\nimport {IS_SERVER, conditionBack} from './build/config';\n<%_ if (frame === 'svelte') { _%>\nimport {svelte} from '@sveltejs/vite-plugin-svelte';\n<%_ } _%>\n\nconst CWD_PATH = process.cwd();\nconst resolveApp = (...paths) => path.resolve(CWD_PATH, ...paths);\n\nexport default defineConfig({\n    build: {\n    <%_ if (mode === 'lib') { _%>\n        lib: {\n            entry: resolveApp('./index.js'),\n            formats: ['es'],\n            name: 'kit-cli',\n            fileName: '[name].js'\n        },\n    <%_ } _%>\n    <%_ if (mode === 'ssr') { _%>\n        ...conditionBack(IS_SERVER, {\n            lib: {\n                entry: 'src/entry-server.ts',\n            }\n        }),\n        outDir: IS_SERVER ? 'dist/server' : 'dist/client',\n    <%_ } _%>\n    },\n    plugins: [\n    <%_ if (mode === 'server') { _%>\n        ...VitePluginNode({\n            appPath: resolveApp('./index.js'),\n        }),\n    <%_ } _%>\n    <%_ if (frame === 'svelte') { _%>\n        svelte()\n    <%_ } _%>\n    ]\n});\n";
 const curDirname = () => dirname(fileURLToPath(import.meta.url));
 const resolveApp = (...paths) => path.resolve(curDirname(), ...paths);
 const CWD_DIR = process.cwd();
@@ -55,7 +55,8 @@ const vite = (context) => {
           context.frame === "svelte" && context.mode === "ssr",
           ["@sveltejs/vite-plugin-svelte"]
         ),
-        ...conditionBack(context.cssPreprocessor === "less", ["less"])
+        ...conditionBack(context.cssPreprocessor === "less", ["less"]),
+        ...conditionBack(context.env === "node", ["vite-plugin-node"])
       ].filter(Boolean);
     }
   };
@@ -125,7 +126,7 @@ const eslint = (context) => {
     name: "eslint",
     createFileMap: () => {
       return {
-        "/.eslintrc.js": () => ejs.render(eslintrcTemplate, context),
+        "/.eslintrc.cjs": () => ejs.render(eslintrcTemplate, context),
         "/.eslintignore": () => eslintignoreTemplate
       };
     },
@@ -297,6 +298,10 @@ program.command("create").argument("[appName]", "appName").description("create a
       choices: [{ value: "spa" }, { value: "ssr" }, { value: "lib" }, { value: "server" }, { value: "component" }],
       default: "spa"
     });
+    let env = "web";
+    if (["lib"].includes(mode)) {
+      env = await select({ message: "请选择运行的环境", choices: [{ value: "web" }, { value: "node" }], default: "web" });
+    }
     let frame = "none";
     if (mode !== "lib") {
       frame = await select({
@@ -339,7 +344,8 @@ program.command("create").argument("[appName]", "appName").description("create a
       useEslint,
       useCssModule,
       cssPreprocessor,
-      complier
+      complier,
+      env
     });
     const spinner = ora("initializing").start();
     const WORKSPACE_DIR = resolveCWD(`./${name}`);
@@ -357,7 +363,8 @@ program.command("create").argument("[appName]", "appName").description("create a
     const dependencies = /* @__PURE__ */ new Set([
       ...conditionBack(frame === "react", ["react", "react-dom"]),
       ...conditionBack(frame === "vue", ["vue", "vue-router"]),
-      ...conditionBack(frame === "svelte", ["svelte"])
+      ...conditionBack(frame === "svelte", ["svelte"]),
+      ...conditionBack(mode === "ssr", ["express", "compression", "sirv"])
     ]);
     const devDependencies = /* @__PURE__ */ new Set([
       "rimraf",
@@ -403,6 +410,7 @@ program.command("create").argument("[appName]", "appName").description("create a
     const codePath = resolveApp("./template/code", getCodePath());
     await recursiveChmod(codePath, 511);
     fs.cpSync(codePath, WORKSPACE_DIR, { recursive: true });
+    await recursiveChmod(WORKSPACE_DIR, 511);
     spinner.succeed("create project succeed");
     console.log(chalk.green(
       [

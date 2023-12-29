@@ -1,0 +1,40 @@
+{
+    /* ------------------------- eslint ------------------------- */
+    "editor.codeActionsOnSave": {
+        "source.fixAll": "explicit"
+    },
+    // eslint工作目录
+    "eslint.workingDirectories": [
+        ".eslintrc.js",
+        ".eslintrc.cjs",
+        ".eslintignore"
+    ],
+    /* ------------------------- svelte ------------------------- */
+    "svelte.plugin.svelte.compilerWarnings": {
+        "a11y-click-events-have-key-events": "ignore",
+        "a11y-no-static-element-interactions": "ignore"
+    },
+    /* ------------------------- 允许json注释 ------------------------- */
+    "files.associations": {
+        "*.json": "jsonc"
+    },
+    "cSpell.words": [
+        "antd",
+        "fontawesome",
+        "fortawesome",
+        "fullhash",
+        "gsap",
+        "hljs",
+        "imgs",
+        "jsoneditor",
+        "lazyload",
+        "nodenext",
+        "persistor",
+        "qiankun",
+        "Sider",
+        "weixin"
+    ],
+    "typescript.tsdk": "node_modules/typescript/lib",
+    "typescript.enablePromptUseWorkspaceTsdk": true,
+    "workbench.tree.enableStickyScroll": true
+}

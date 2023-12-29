@@ -1,5 +1,7 @@
 import { defineConfig } from 'vite';
+<%_ if (env === 'node') { _%>
 import { VitePluginNode } from 'vite-plugin-node';
+<%_ } _%>
 import path from 'path';
 import {fileURLToPath} from 'url';
 import {dirname, resolve} from 'path';
@@ -37,13 +39,7 @@ export default defineConfig({
         }),
     <%_ } _%>
     <%_ if (frame === 'svelte') { _%>
-        svelte({
-        <%_ if (mode === 'ssr') { _%>
-            compilerOptions: {
-                hydratable: true
-            }
-        <%_ } _%>
-        })
+        svelte()
     <%_ } _%>
     ]
 });
