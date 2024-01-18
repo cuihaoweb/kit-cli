@@ -1,0 +1,39 @@
+pipeline {
+  agent any
+
+  stages {
+    stage('拉取远程代码') {
+      steps {
+        echo "拉取远程代码"
+        // 参考jenkins流水线语法
+      }
+    }
+
+    stage('清理环境') {
+      steps {
+        sh 'chmod +x script/build.sh'
+        sh "script/build.sh clean"
+      }
+    }
+
+    stage('提供基础环境') {
+      steps {
+        sh "script/build.sh buildBaseEnv"
+      }
+    }
+
+    stage('构建镜像') {
+      steps {
+        sh "script/build.sh buildImage"
+      }
+    }
+
+    stage('启动镜像') {
+      steps {
+        input message: '确认发布', ok: '发布'
+
+        sh "script/build.sh startImage"
+      }
+    }
+  }
+}

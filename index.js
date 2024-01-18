@@ -11,7 +11,7 @@ import pLimit from "p-limit";
 import { cpus } from "os";
 import ejs from "ejs";
 import { fileURLToPath } from "url";
-const viteTemplate = "import { defineConfig } from 'vite';\n<%_ if (env === 'node') { _%>\nimport { VitePluginNode } from 'vite-plugin-node';\n<%_ } _%>\nimport path from 'path';\nimport {fileURLToPath} from 'url';\nimport {dirname, resolve} from 'path';\nimport {IS_SERVER, conditionBack} from './build/config';\n<%_ if (frame === 'svelte') { _%>\nimport {svelte} from '@sveltejs/vite-plugin-svelte';\n<%_ } _%>\n\nconst CWD_PATH = process.cwd();\nconst resolveApp = (...paths) => path.resolve(CWD_PATH, ...paths);\n\nexport default defineConfig({\n    build: {\n    <%_ if (mode === 'lib') { _%>\n        lib: {\n            entry: resolveApp('./index.js'),\n            formats: ['es'],\n            name: 'kit-cli',\n            fileName: '[name].js'\n        },\n    <%_ } _%>\n    <%_ if (mode === 'ssr') { _%>\n        ...conditionBack(IS_SERVER, {\n            lib: {\n                entry: 'src/entry-server.ts',\n            }\n        }),\n        outDir: IS_SERVER ? 'dist/server' : 'dist/client',\n    <%_ } _%>\n    },\n    plugins: [\n    <%_ if (mode === 'server') { _%>\n        ...VitePluginNode({\n            appPath: resolveApp('./index.js'),\n        }),\n    <%_ } _%>\n    <%_ if (frame === 'svelte') { _%>\n        svelte()\n    <%_ } _%>\n    ]\n});\n";
+const viteTemplate = "import { defineConfig } from 'vite';\n<%_ if (env === 'node') { _%>\nimport { VitePluginNode } from 'vite-plugin-node';\n<%_ } _%>\nimport path from 'path';\nimport {fileURLToPath} from 'url';\nimport {dirname, resolve} from 'path';\nimport {IS_SERVER, conditionBack} from './build/config';\n<%_ if (frame === 'svelte') { _%>\nimport {svelte} from '@sveltejs/vite-plugin-svelte';\n<%_ } _%>\n<%_ if (['spa', 'ssr', 'component'].includes(mode)) { _%>\nimport purgecss from 'vite-plugin-purgecss-v2';\n<%_ } _%>\n\nconst CWD_PATH = process.cwd();\nconst resolveApp = (...paths) => path.resolve(CWD_PATH, ...paths);\n\nexport default defineConfig({\n    resolve: {\n        alias: [\n            {find: /^@\\/(.*)$/, replacement: path.resolve(__dirname, './src/$1')}\n        ]\n    },\n    build: {\n    <%_ if (mode === 'lib') { _%>\n        lib: {\n            entry: resolveApp('./index.js'),\n            formats: ['es'],\n            name: 'kit-cli',\n            fileName: '[name].js'\n        },\n    <%_ } _%>\n    <%_ if (mode === 'ssr') { _%>\n        ...conditionBack(IS_SERVER, {\n            lib: {\n                entry: 'src/entry-server.ts',\n            }\n        }),\n        outDir: IS_SERVER ? 'dist/server' : 'dist/client',\n    <%_ } _%>\n    },\n    plugins: [\n    <%_ if (['spa', 'ssr', 'component'].includes(mode)) { _%>\n        purgecss(),\n    <%_ } _%>\n    <%_ if (mode === 'server') { _%>\n        ...VitePluginNode({\n            appPath: resolveApp('./index.js'),\n        }),\n    <%_ } _%>\n    <%_ if (frame === 'svelte') { _%>\n        svelte()\n    <%_ } _%>\n    ]\n});\n";
 const curDirname = () => dirname(fileURLToPath(import.meta.url));
 const resolveApp = (...paths) => path.resolve(curDirname(), ...paths);
 const CWD_DIR = process.cwd();
@@ -52,10 +52,14 @@ const vite = (context) => {
       return [
         "vite",
         ...conditionBack(
+          ["spa", "ssr", "component"].includes(context.mode),
+          ["vite-plugin-purgecss-v2"]
+        ),
+        ...conditionBack(
           context.frame === "svelte" && context.mode === "ssr",
           ["@sveltejs/vite-plugin-svelte"]
         ),
-        ...conditionBack(context.cssPreprocessor === "less", ["less"]),
+        ...conditionBack(context.cssPreprocessor === "less", ["less"], ["sass"]),
         ...conditionBack(context.env === "node", ["vite-plugin-node"])
       ].filter(Boolean);
     }
@@ -271,13 +275,108 @@ const packagejson = (context) => {
     }
   };
 };
+const droneTemplate = "kind: pipeline\ntype: exec\nname: app-name\n\nplatform:\n  os: linux\n  arch: amd64\n\nsteps:\n  - name: build\n    commands:\n      - chmod +x ./script/build.sh\n      - ./script/build.sh clean\n      - ./script/build.sh buildImage\n      - ./script/build.sh startImage\n";
+const buildTemplate = '#!/bin/bash\n\nIMAGE_NAME="app-name:1.0"\nCONTAINER_NAME="my-app-name"\n\nclean() {\n    if [[ "$(docker images -q $IMAGE_NAME 2> /dev/null)" != "" ]]; then\n        echo "$IMAGE_NAME exist, and deleting $IMAGE_NAME"\n        # 如果存在同名镜像，检查是否有同名的容器在运行\n        if [[ "$(docker ps -aq -f name=$CONTAINER_NAME 2> /dev/null)" != "" ]]; then\n            # 如果有同名容器在运行，停止并删除容器\n            echo "$CONTAINER_NAME exist, and deleting $CONTAINER_NAME"\n            docker stop $CONTAINER_NAME\n            docker rm $CONTAINER_NAME\n        fi\n        # 删除同名镜像\n        docker rmi $IMAGE_NAME\n    fi\n    # 删除悬空镜像\n    if [[ "$(docker images -f "dangling=true" -q 2> /dev/null)" != "" ]]; then\n        echo "cleaning dangling images"\n        docker rmi $(docker images -f "dangling=true" -q) 2> /dev/null\n    fi\n}\n\nbuildImage() {\n    echo "staring build $IMAGE_NAME image"\n    docker build -t $IMAGE_NAME .\n}\n\nstartImage() {\n    echo "staring build image $IMAGE_NAME"\n    docker run \\\n        -d \\\n        --restart=always \\\n        --name $CONTAINER_NAME \\\n        -u root \\\n        -p 3000:3000 \\\n        --restart=always \\\n        $IMAGE_NAME\n}\n\nmain() {\n    action="$1"\n    echo "$action"\n\n    if [ "$action" = "clean" ]; then\n        clean\n    elif [ "$action" = "buildImage" ]; then\n        buildImage\n    elif [ "$action" = "startImage" ]; then\n        startImage\n    fi\n}\n\nmain "$@"\n';
+const DockerfileTemplate = '# build stage\nFROM node:18-alpine as build-stage\nRUN node -v \\\n    && npm -v \\\n    && npm config set registry https://registry.npm.taobao.org/ \\\n    && npm config get registry\nWORKDIR /app\nCOPY package*.json ./\nCOPY *-lock.json ./\nRUN npm config get registry \\\n    && npm install\nCOPY . .\nRUN npm run build\nEXPOSE 3000\nCMD [ "npm", "run", "start"]';
+const JenkinsfileTemplate = `pipeline {
+  agent any
+
+  stages {
+    stage('拉取远程代码') {
+      steps {
+        echo "拉取远程代码"
+        // 参考jenkins流水线语法
+      }
+    }
+
+    stage('清理环境') {
+      steps {
+        sh 'chmod +x script/build.sh'
+        sh "script/build.sh clean"
+      }
+    }
+
+    stage('提供基础环境') {
+      steps {
+        sh "script/build.sh buildBaseEnv"
+      }
+    }
+
+    stage('构建镜像') {
+      steps {
+        sh "script/build.sh buildImage"
+      }
+    }
+
+    stage('启动镜像') {
+      steps {
+        input message: '确认发布', ok: '发布'
+
+        sh "script/build.sh startImage"
+      }
+    }
+  }
+}`;
+const docker = (context) => {
+  return {
+    name: "CI-CD",
+    createFileMap: () => {
+      return {
+        "/script/build.sh": () => buildTemplate,
+        "/.drone.yml": () => droneTemplate,
+        "/Dockerfile": () => DockerfileTemplate,
+        "/Jenkinsfile": () => JenkinsfileTemplate
+      };
+    },
+    getDeps: () => [],
+    getDevDeps: () => []
+  };
+};
+const postcssTemplate = "module.exports = {\n    plugins: [\n        require('tailwindcss'),\n        require('autoprefixer'),\n        require('postcss-pxtorem')({\n            rootValue: 16, // 指定转换倍率，我现在设置这个表示1rem=16px;\n            propList: ['*'] // 属性列表，表示你要把哪些css属性的px转换成rem，这个*表示所有\n            // minPixelValue: 1, // 需要转换的最小值，一般1px像素不转换，以上才转换\n            // unitPrecision: 6, // 转换成rem单位的小数点后的保留位数\n            // selectorBalckList: ['van'], // 匹配不被转换为rem的选择器\n            // replace: true, // 替换包含rem的规则，而不是添加回退\n            // mediaQuery: false // 允许在媒体查询中转换px\n        })\n    ]\n};\n";
+const tailwindTemplate = `/** @type {import('tailwindcss').Config} */
+module.exports = {
+    content: ["src/**/*.{html,js,svelte,tsx,jsx,vue}"],
+    theme: {
+        extend: {},
+    },
+    plugins: [],
+};`;
+const css = (context) => {
+  return {
+    name: "css",
+    createFileMap: () => {
+      return {
+        "/postcss.config.cjs": () => postcssTemplate,
+        "/tailwind.config.js": () => tailwindTemplate
+      };
+    },
+    getDeps: () => [
+      ...conditionBack(
+        ["spa", "ssr", "component"].includes(context.mode),
+        ["tailwindcss"]
+      )
+    ],
+    getDevDeps: () => [
+      ...conditionBack(
+        ["spa", "ssr", "component"].includes(context.mode),
+        [
+          "postcss",
+          "postcss-pxtorem",
+          "autoprefixer"
+        ]
+      )
+    ]
+  };
+};
 const templateMap = {
   vite,
   webpack,
   babel,
   eslint,
   javascript,
-  packagejson
+  packagejson,
+  docker,
+  css
 };
 const sourceCode = (context) => {
   return {
@@ -358,7 +457,9 @@ program.command("create").argument("[appName]", "appName").description("create a
         templateMap.webpack
       ], [templateMap.vite]),
       templateMap.eslint,
-      templateMap.javascript
+      templateMap.javascript,
+      templateMap.docker,
+      templateMap.css
     ];
     const dependencies = /* @__PURE__ */ new Set([
       ...conditionBack(frame === "react", ["react", "react-dom"]),

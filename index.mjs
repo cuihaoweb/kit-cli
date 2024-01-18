@@ -88,7 +88,9 @@ program
                     templateMap.webpack
                 ], [templateMap.vite]),
                 templateMap.eslint,
-                templateMap.javascript
+                templateMap.javascript,
+                templateMap.docker,
+                templateMap.css
             ];
             const dependencies = new Set([
                 ...conditionBack(frame === 'react', ['react', 'react-dom']),

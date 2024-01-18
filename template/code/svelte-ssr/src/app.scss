@@ -1,0 +1,36 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+$grid-columns:                24 !default;
+$grid-gutter-width:           0 !default;
+$grid-row-columns:            0 !default;
+@import 'bootstrap/scss/bootstrap.scss';
+
+
+* {
+  padding: 0;
+  margin: 0;
+}
+
+/* 1242下，1rem = 16px */
+html {
+  font-size: calc(100vw * 16 / 1242);
+}
+
+html,
+body,
+#app {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.row {
+  width: 100%;
+}
+
+a {
+  color: #fff;
+  text-decoration: none;
+}

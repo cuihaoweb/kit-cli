@@ -9,11 +9,19 @@ import {IS_SERVER, conditionBack} from './build/config';
 <%_ if (frame === 'svelte') { _%>
 import {svelte} from '@sveltejs/vite-plugin-svelte';
 <%_ } _%>
+<%_ if (['spa', 'ssr', 'component'].includes(mode)) { _%>
+import purgecss from 'vite-plugin-purgecss-v2';
+<%_ } _%>
 
 const CWD_PATH = process.cwd();
 const resolveApp = (...paths) => path.resolve(CWD_PATH, ...paths);
 
 export default defineConfig({
+    resolve: {
+        alias: [
+            {find: /^@\/(.*)$/, replacement: path.resolve(__dirname, './src/$1')}
+        ]
+    },
     build: {
     <%_ if (mode === 'lib') { _%>
         lib: {
@@ -33,6 +41,9 @@ export default defineConfig({
     <%_ } _%>
     },
     plugins: [
+    <%_ if (['spa', 'ssr', 'component'].includes(mode)) { _%>
+        purgecss(),
+    <%_ } _%>
     <%_ if (mode === 'server') { _%>
         ...VitePluginNode({
             appPath: resolveApp('./index.js'),

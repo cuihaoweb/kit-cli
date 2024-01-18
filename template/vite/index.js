@@ -16,10 +16,14 @@ export default context => {
             return [
                 'vite',
                 ...conditionBack(
+                    ['spa', 'ssr', 'component'].includes(context.mode),
+                    ['vite-plugin-purgecss-v2']
+                ),
+                ...conditionBack(
                     context.frame === 'svelte' && context.mode === 'ssr',
                     ['@sveltejs/vite-plugin-svelte']
                 ),
-                ...conditionBack(context.cssPreprocessor === 'less', ['less']),
+                ...conditionBack(context.cssPreprocessor === 'less', ['less'], ['sass']),
                 ...conditionBack(context.env === 'node', ['vite-plugin-node'])
             ].filter(Boolean);
         }
